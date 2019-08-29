@@ -76,13 +76,13 @@
 
   
   
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat:400,700|Roboto:400,400italic,700|Roboto+Mono&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Cutive+Mono|Lora:400,700|Roboto:400,700&display=swap">
   
 
   
   
   
-  <link rel="stylesheet" href="/css/academic.min.dd629241ea9333c62c071f4a25f829ff.css">
+  <link rel="stylesheet" href="/css/academic.min.76ccf3ba33979ad15153651454d086d8.css">
 
   
 
@@ -116,7 +116,7 @@
   <meta property="og:description" content="Senior Data Scientist"><meta property="og:image" content="/img/icon-192.png">
   <meta property="twitter:image" content="/img/icon-192.png"><meta property="og:locale" content="en-us">
   
-    <meta property="og:updated_time" content="2015-07-23T21:13:14-05:00">
+    <meta property="og:updated_time" content="2019-08-28T00:00:00&#43;00:00">
   
 
   
@@ -418,12 +418,12 @@
   
   
   <div>
-    <h2><a href="/post/2015-07-23-r-rmarkdown/">Hello R Markdown</a></h2>
+    <h2><a href="/post/ipfr/2019-08-27-ipfr/">Introducing the ipfr package</a></h2>
     <div class="article-style">
       
-      R MarkdownThis is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.
-You can embed an R code chunk like this:
-summary(cars)## speed dist ## Min. : 4.0 Min. : 2.00 ## 1st Qu.:12.0 1st Qu.: 26.00 ## Median :15.0 Median : 36.00 ## Mean :15.4 Mean : 42.98 ## 3rd Qu.
+      I’m happy to announce that the ipfr packageis available on CRAN! The goal of this package is to make survey expansion,matrix balancing, and population synthesis easier.
+A basic use case is the task of balancing a matrix to row and column targets:
+library(ipfr)library(dplyr)mtx &lt;- matrix(data = runif(9), nrow = 3, ncol = 3)row_targets &lt;- c(3, 4, 5)column_targets &lt;- c(5, 4, 3)result &lt;- ipu_matrix(mtx, row_targets, column_targets)rowSums(result)#&gt; [1] 3.
       
     </div>
   </div>

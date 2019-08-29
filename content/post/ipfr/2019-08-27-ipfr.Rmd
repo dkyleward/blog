@@ -1,0 +1,74 @@
+---
+title: "Introducing the ipfr package"
+author: "Kyle Ward"
+date: 2019-08-28
+categories: ["R"]
+tags: ["R Markdown", "ipfr", "packages"]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>")
+library(ipfr)
+library(dplyr)
+set.seed(42)
+```
+
+I'm happy to announce that the [ipfr package](https://github.com/dkyleward/ipfr)
+is available on CRAN! The goal of this package is to make survey expansion,
+matrix balancing, and population synthesis easier.
+
+A basic use case is the task of balancing a matrix to row and column targets:
+
+```{r, eval=FALSE}
+library(ipfr)
+library(dplyr)
+```
+```{r matrix}
+mtx <- matrix(data = runif(9), nrow = 3, ncol = 3)
+row_targets <- c(3, 4, 5)
+column_targets <- c(5, 4, 3)
+result <- ipu_matrix(mtx, row_targets, column_targets)
+
+rowSums(result)
+colSums(result)
+```
+
+The example below creates a simple survey and expands it to meet known
+population targets. Each row in the `survey` data frame represents a household
+and contains information on the number of household members (`size`) and number
+of `autos`. The `targets` list contains population targets that the survey
+expansion should match. For example, there should be a total of 75 households
+with 1 person.
+
+```{r survey}
+survey <- tibble(
+  size = c(1, 2, 1, 1),
+  autos = c(0, 2, 2, 1),
+  weight = 1
+)
+targets <- list()
+targets$size <- tibble(
+  `1` = 75,
+  `2` = 25
+)
+targets$autos <- tibble(
+  `0` = 25,
+  `1` = 50,
+  `2` = 25
+)
+result <- ipu(survey, targets)
+```
+
+The package also supports a number of advanced features:
+
+  * Match to household- and person-level targets simultaneously
+  * View and restrict the distribution of resulting weights
+  * Control by geography
+  * Handle target agreement and importance
+
+Finally, the resulting weight table can be used to easily create a synthetic
+population:
+
+```{r}
+synthesize(result$weight_tbl)
+```

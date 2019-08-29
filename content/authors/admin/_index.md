@@ -1,7 +1,30 @@
 ---
+# Display name
+name: Kyle Ward
+
+# Username (this should match the folder name)
 authors:
 - admin
-bio: 
+
+# Is this the primary user of the site?
+superuser: true
+
+# Role/position
+role: Senior Data Scientist
+
+# Organizations/Affiliations
+organizations:
+- name: Caliper Corporation
+  url: "https://www.caliper.com/"
+
+# Short bio (displayed in user profile at end of posts)
+bio: My interests include data science, machine learning and travel modeling.
+
+interests:
+- R
+- Machine  Learning
+- Travel Modeling
+
 education:
   courses:
   - course: M.S. Civil Engineering
@@ -13,20 +36,19 @@ education:
   - course: Minor Statistics
     institution: NC State University
     year: 2007
+
+# Enter email to display Gravatar (if Gravatar enabled in Config)
 email: ""
-interests:
-- R
-- Machine  Learning
-- Travel Modeling
-name: Kyle Ward
-organizations:
-- name: Caliper Corporation
-  url: "https://www.caliper.com/"
-role: Senior Data Scientist
+
+
+# Social/Academic Networking
+# For available icons, see: https://sourcethemes.com/academic/docs/widgets/#icons
+#   For an email link, use "fas" icon pack, "envelope" icon, and a link in the
+#   form "mailto:your-email@example.com" or "#contact" for contact widget.
 social:
 - icon: envelope
   icon_pack: fas
-  link: '#contact'
+  link: "mailto:kyle@caliper.com"
 - icon: github
   icon_pack: fab
   link: https://github.com/dkyleward
@@ -36,11 +58,16 @@ social:
 - icon: linkedin
   icon_pack: fab
   link: https://www.linkedin.com/in/dkyleward/
-- icon: stackoverflow
+- icon: stack-overflow
   icon_pack: fab
   link: https://stackoverflow.com/users/8299047
-superuser: true
+  
+# Organizational groups that you belong to (for People widget)
+#   Set this to `[]` or comment out if you are not using People widget.    
 user_groups:
 ---
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed neque elit, tristique placerat feugiat ac, facilisis vitae arcu. Proin eget egestas augue. Praesent ut sem nec arcu pellentesque aliquet. Duis dapibus diam vel metus tempus vulputate. 
+Kyle Ward is a Senior Data Scientist at Caliper Corporation, which develops GIS
+software for travel demand modeling, redistricting and accessibility analysis.
+His interests include large-scale microsimulation, building APIs in new software
+languages and applying machine learning to solve problems.

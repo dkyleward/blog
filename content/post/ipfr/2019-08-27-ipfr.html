@@ -1,0 +1,71 @@
+---
+title: "Introducing the ipfr package"
+author: "Kyle Ward"
+date: 2019-08-28
+categories: ["R"]
+tags: ["R Markdown", "ipfr", "packages"]
+---
+
+
+
+<p>I’m happy to announce that the <a href="https://github.com/dkyleward/ipfr">ipfr package</a>
+is available on CRAN! The goal of this package is to make survey expansion,
+matrix balancing, and population synthesis easier.</p>
+<p>A basic use case is the task of balancing a matrix to row and column targets:</p>
+<pre class="r"><code>library(ipfr)
+library(dplyr)</code></pre>
+<pre class="r"><code>mtx &lt;- matrix(data = runif(9), nrow = 3, ncol = 3)
+row_targets &lt;- c(3, 4, 5)
+column_targets &lt;- c(5, 4, 3)
+result &lt;- ipu_matrix(mtx, row_targets, column_targets)
+
+rowSums(result)
+#&gt; [1] 3.000001 4.000015 4.999985
+colSums(result)
+#&gt; [1] 5 4 3</code></pre>
+<p>The example below creates a simple survey and expands it to meet known
+population targets. Each row in the <code>survey</code> data frame represents a household
+and contains information on the number of household members (<code>size</code>) and number
+of <code>autos</code>. The <code>targets</code> list contains population targets that the survey
+expansion should match. For example, there should be a total of 75 households
+with 1 person.</p>
+<pre class="r"><code>survey &lt;- tibble(
+  size = c(1, 2, 1, 1),
+  autos = c(0, 2, 2, 1),
+  weight = 1
+)
+targets &lt;- list()
+targets$size &lt;- tibble(
+  `1` = 75,
+  `2` = 25
+)
+targets$autos &lt;- tibble(
+  `0` = 25,
+  `1` = 50,
+  `2` = 25
+)
+result &lt;- ipu(survey, targets)</code></pre>
+<p>The package also supports a number of advanced features:</p>
+<ul>
+<li>Match to household- and person-level targets simultaneously</li>
+<li>View and restrict the distribution of resulting weights</li>
+<li>Control by geography</li>
+<li>Handle target agreement and importance</li>
+</ul>
+<p>Finally, the resulting weight table can be used to easily create a synthetic
+population:</p>
+<pre class="r"><code>synthesize(result$weight_tbl)
+#&gt; # A tibble: 100 x 4
+#&gt;    new_id    id  size autos
+#&gt;     &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
+#&gt;  1      1     1     1     0
+#&gt;  2      2     4     1     1
+#&gt;  3      3     1     1     0
+#&gt;  4      4     2     2     2
+#&gt;  5      5     4     1     1
+#&gt;  6      6     4     1     1
+#&gt;  7      7     2     2     2
+#&gt;  8      8     2     2     2
+#&gt;  9      9     4     1     1
+#&gt; 10     10     4     1     1
+#&gt; # ... with 90 more rows</code></pre>
