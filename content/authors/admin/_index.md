@@ -18,11 +18,11 @@ organizations:
   url: "https://www.caliper.com/"
 
 # Short bio (displayed in user profile at end of posts)
-bio: My interests include data science, machine learning and travel modeling.
+bio: My interests include data science, machine learning, and travel modeling.
 
 interests:
-- R
-- Machine  Learning
+- Data Science
+- Machine Learning
 - Travel Modeling
 
 education:
@@ -68,6 +68,6 @@ user_groups:
 ---
 
 Kyle Ward is a Senior Data Scientist at Caliper Corporation, which develops GIS
-software for travel demand modeling, redistricting and accessibility analysis.
+software for travel demand modeling, redistricting, and accessibility analysis.
 His interests include large-scale microsimulation, building APIs in new software
-languages and applying machine learning to solve problems.
+languages, and applying machine learning to solve problems.
