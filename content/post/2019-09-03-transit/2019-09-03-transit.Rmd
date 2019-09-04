@@ -1,0 +1,59 @@
+---
+title: "Understanding Transit Ridership Trends"
+author: "Kyle Ward"
+date: 2019-09-03
+categories: ["R"]
+tags: ["R Markdown", "transit"]
+image:
+ placement: 2
+ caption: ""
+ focal_point: ""
+ preview_only: false
+projects: ""
+editor_options: 
+  chunk_output_type: console
+draft: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, out.width = "100%")
+library(tidyverse)
+library(readxl)
+library(here)
+library(plotly)
+```
+
+```{r}
+xlsx <- here("static", "data", "fta-transit-database.xlsx")
+upt_tbl <- read_excel(xlsx, sheet = "UPT")
+```
+
+
+
+```{r}
+data <- upt_tbl %>%
+  group_by(Agency) %>%
+  summarize(Trips = round(sum(JUN19) / 1000, 0)) %>%
+  arrange(desc(Trips)) %>%
+  head(10) %>%
+  arrange(Trips) %>%
+  mutate(
+    word_count = str_count(Agency, "\\W+") + 1,
+    min = pmin(word_count, 4),
+    Agency = word(Agency, 1, pmin(word_count, 4)),
+    Agency = gsub(",", "", Agency)
+  )
+
+plot_ly(
+  data, y = ~Agency, x = ~Trips, type = "bar", orientation = "h",
+  text = data$Agency, textposition = "auto", hoverinfo = 'x'
+) %>%
+  layout(
+    yaxis = list(
+      categoryorder = "array",
+      categoryarray = ~Trips,
+      showticklabels = FALSE
+    )
+  )
+```
+

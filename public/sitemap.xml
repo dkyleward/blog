@@ -34,11 +34,41 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2019-08-28T00:00:00+00:00</lastmod>
+    <lastmod>2019-09-03T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/post/ipfr/2019-08-27-ipfr/</loc>
+    <loc>/post/</loc>
+    <lastmod>2019-09-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/categories/r/</loc>
+    <lastmod>2019-09-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/r-markdown/</loc>
+    <lastmod>2019-09-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/</loc>
+    <lastmod>2019-09-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/transit/</loc>
+    <lastmod>2019-09-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/post/2019-09-03-transit/2019-09-03-transit/</loc>
+    <lastmod>2019-09-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/post/2019-08-27-ipfr/2019-08-27-ipfr/</loc>
     <lastmod>2019-08-28T00:00:00+00:00</lastmod>
   </url>
   
@@ -49,26 +79,6 @@
   
   <url>
     <loc>/tags/packages/</loc>
-    <lastmod>2019-08-28T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/post/</loc>
-    <lastmod>2019-08-28T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/categories/r/</loc>
-    <lastmod>2019-08-28T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/r-markdown/</loc>
-    <lastmod>2019-08-28T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/</loc>
     <lastmod>2019-08-28T00:00:00+00:00</lastmod>
   </url>
   
