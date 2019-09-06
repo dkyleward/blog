@@ -125,7 +125,9 @@ plot_ly(
   hoverinfo = "x+y+text", hovertext = ~Agency
 ) %>%
   layout(
-    showlegend = FALSE
+    showlegend = FALSE,
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Trips")
   )
 ```
 
@@ -144,7 +146,11 @@ data3 <- upt_tbl %>%
 
 plot_ly(
   data3, x = ~Trips, type = "histogram", nbinsx = 30
-)
+) %>%
+  layout(
+    title = "Histogram of Agencies by Number of Trips",
+    yaxis = list(title = "Count of Agencies")
+  )
 ```
 
 To make the time series charts more legible, we'll collapse agencies under 2
@@ -191,7 +197,8 @@ plot_ly(data4) %>%
   ) %>%
   layout(
     title = "Chicago Transit Authority Ridership",
-    yaxis = list(rangemode = "tozero"),
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Trips", rangemode = "tozero"),
     annotations = list(
       x = ymd("2011-09-01"), y = 35000000, text = "Uber Starts",
       xref = "x", yref = "y",
@@ -244,6 +251,12 @@ plot_ly(data5) %>%
     color = ~Agency, colors = ~unique(color),
     text = ~Agency, hoverinfo = "x+y+text",
     showlegend = FALSE
+  ) %>%
+  layout(
+    title = "Adjusted Ridership by Agency",
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Trips")
+    
   )
 ```
 
@@ -273,7 +286,11 @@ p2 <- plot_ly(data5 %>% filter(Agency == "Under 2M")) %>%
   ) %>%
   layout(yaxis = list(rangemode = "tozero"))
 
-subplot(p1, p2)
+subplot(p1, p2) %>%
+  layout(
+    title = "Median Ridership for Small Markets",
+    yaxis = list(title = "Trips")
+  )
 ```
 
 The Uber/Lyft connection seems obvious, but this post has not done the work
