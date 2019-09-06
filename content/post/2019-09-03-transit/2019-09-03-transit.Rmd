@@ -2,8 +2,8 @@
 title: "Understanding Transit Ridership Trends"
 author: "Kyle Ward"
 date: 2019-09-03
-categories: ["R"]
-tags: ["R Markdown", "transit"]
+categories: ["transportation"]
+tags: ["R", "transit"]
 image:
  placement: 2
  caption: ""
@@ -75,10 +75,10 @@ extract_trend <- function(x, start_year) {
 }
 ```
 
-Before talking about national transit trends, it's important to grasp the size
-of the NYC market. The chart below shows the top 10 transit agencies by monthly
-ridership (June 2019 unlinked trips). NYC dwarfs the other transit markets, and
-for this post, is set aside as an outlier.
+Before talking about national transit trends, it's important to grasp the
+relative size of the NYC market. The chart below shows the top 10 transit
+agencies by monthly ridership (June 2019 unlinked trips). NYC dwarfs the other
+transit markets, and for this post, is set aside as an outlier.
 
 ```{r, out.width="100%", warning=FALSE}
 data1 <- upt_tbl %>%
@@ -92,10 +92,10 @@ data1 <- upt_tbl %>%
 
 plot_ly(
   data1, y = ~Agency, x = ~Trips, type = "bar", orientation = "h",
-  text = data$Agency, textposition = "auto", hoverinfo = 'x'
+  text = ~Agency, textposition = "auto", hoverinfo = 'x'
 ) %>%
   layout(
-    title = "Top 10 Transit Agencies (trips)",
+    title = "Top 10 Transit Agencies (June 2019 trips)",
     yaxis = list(
       categoryorder = "array",
       categoryarray = ~Agency,
@@ -122,7 +122,8 @@ data2 <- upt_tbl %>%
   
 plot_ly(
   data2, x = ~date, y = ~trips, type = "scatter", mode = "lines",
-  color = ~Agency, colors = ~unique(color)
+  color = ~Agency, colors = ~unique(color),
+  hoverinfo = "x+y+text", hovertext = ~Agency
 ) %>%
   layout(
     showlegend = FALSE
@@ -158,7 +159,7 @@ it. For most agencies, ridership is low in December and January and peaks around
 October. Removing these seasonal variations helps us understand the underlying
 trends. The chart below shows the monthly ridership for the Chicago Transit
 Authority. The actual ridership is shown by the jagged line while the trend is
-highlighted in orange. The trend line makes it clear that (seaonally adjusted)
+highlighted in orange. The trend line makes it clear that (seasonally adjusted)
 ridership peaked in April of 2012. As a point of reference, the vertical green
 line marks when Uber began service in Chicago.
 
@@ -175,17 +176,18 @@ data4 <- upt_tbl %>%
 plot_ly(data4) %>%
   add_trace(
     x = ~date, y = ~trips, type = "scatter", mode = "lines",
-    alpha = .33, name = "seasonal", color = ~Agency, colors = ~unique(color)
+    alpha = .33, name = "seasonal", color = ~Agency, colors = ~unique(color),
+    hoverinfo = "none"
   ) %>%
   add_trace(
     x = ~date, y = ~trend, type = "scatter", mode = "lines",
-    name = "trend", alpha = 1
+    name = "trend", alpha = 1, hoverinfo = "x+y"
   ) %>%
   add_trace(
     x = c(ymd("2011-09-01"), ymd("2011-09-01")),
     y = c(0, 52000000),
     type = "scatter", mode = "lines", name = "Uber in CHI",
-    hoverinfo = "text", hovertext = "Uber Starts",
+    hoverinfo = "none",
     showlegend = FALSE
   ) %>%
   layout(
@@ -199,10 +201,13 @@ plot_ly(data4) %>%
   )
 ```
 
-The chart below tells a fairly concise story about what is happening to transit
-ridership. The medium markets like Chicago began seeing declines in ridership
-between 2012 and 2014, and this trend has has continued. This is the same time
-frame when Uber and Lyft began showing up in these cities.
+## Results
+
+With the above modifications in place, the chart below tells a fairly concise
+story about what is happening to transit ridership. Medium markets like
+Chicago began seeing declines in ridership between 2012 and 2014, and this trend
+has has continued. This is the same time frame when Uber and Lyft began showing
+up in these cities.
 
 ```{r}
 data5 <- upt_tbl %>%
@@ -237,7 +242,7 @@ plot_ly(data5) %>%
   add_trace(
     x = ~date, y = ~trend, type = "scatter", mode = "lines",
     color = ~Agency, colors = ~unique(color),
-    text = ~Agency, hoverinfo = "text",
+    text = ~Agency, hoverinfo = "x+y+text",
     showlegend = FALSE
   )
 ```
@@ -245,7 +250,7 @@ plot_ly(data5) %>%
 The small (<10 million) and tiny (<2 million) agencies look relatively stable in
 the chart above, but that is mainly due to the scale of the graph. The charts
 below zoom in to provide a more accurate picture. The median ridership in these
-markets is also falling. The decline in the tiny markets is noticeably later.
+markets is also falling. The decline in the tiny markets starts noticeably later.
 One theory could be that Uber/Lyft simply arrived in these regions later.
 
 ```{r}
@@ -256,7 +261,7 @@ p1 <- plot_ly(data5 %>% filter(Agency == "2M to 10M")) %>%
   add_trace(
     x = ~date, y = ~trend, type = "scatter", mode = "lines",
     color = ~Agency, colors = ~unique(color),
-    text = ~Agency, hoverinfo = "text"
+    hoverinfo = "x+y"
   ) %>%
   layout(yaxis = list(rangemode = "tozero"))
 
@@ -264,7 +269,7 @@ p2 <- plot_ly(data5 %>% filter(Agency == "Under 2M")) %>%
   add_trace(
     x = ~date, y = ~trend, type = "scatter", mode = "lines",
     color = ~Agency, colors = ~unique(color),
-    text = ~Agency, hoverinfo = "text"
+    hoverinfo = "x+y"
   ) %>%
   layout(yaxis = list(rangemode = "tozero"))
 
@@ -277,4 +282,8 @@ in more detail. This goal of this post was primarily to provide insight into
 what is happening with transit ridership.
 
 ## Reproducibility
-Reproduce what you see above and take it further!
+Reproduce what you see above and take it further! If you do, send me a link and
+I'll post it here. Everything you need to get started is on GitHub:
+
+Data: [FTA xlsx](https://github.com/dkyleward/blog/blob/master/static/data/June%202019%20Adjusted%20Database.xlsx) ([original source](https://www.transit.dot.gov/ntd/data-product/monthly-module-adjusted-data-release) is always the latest month)  
+Code: [Rmd](https://github.com/dkyleward/blog/blob/master/content/post/2019-09-03-transit/2019-09-03-transit.Rmd)
