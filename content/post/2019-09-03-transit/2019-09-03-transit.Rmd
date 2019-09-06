@@ -18,42 +18,263 @@ draft: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, out.width = "100%")
 library(tidyverse)
+library(lubridate)
 library(readxl)
 library(here)
 library(plotly)
+library(RColorBrewer)
 ```
 
 ```{r}
-xlsx <- here("static", "data", "fta-transit-database.xlsx")
-upt_tbl <- read_excel(xlsx, sheet = "UPT")
-```
+xlsx <- here::here("static", "data", "June 2019 Adjusted Database.xlsx")
+upt_tbl_raw <- read_excel(xlsx, sheet = "UPT")
 
+# We will use this table as a starting point for several charts below
+upt_tbl <- upt_tbl_raw %>%
+  filter(Active == "Active") %>%
+  gather(key = "month_year", value = "trips", JAN02:JUN19) %>%
+  mutate(
+    year = substr(
+      month_year, start = str_length(month_year) - 1, stop = str_length(month_year)
+    ),
+    month = substr(month_year, start = 1, stop = 3),
+    date = parse_date_time2(month_year, orders = "my")
+  ) %>%
+  arrange(Agency, date)
 
-
-```{r}
-data <- upt_tbl %>%
+# Assign a color to each agency for consistent charts
+color_pal <- colorRampPalette(brewer.pal(8, "Set2"))
+color_tbl <- upt_tbl %>%
+  filter(month_year == "JUN19") %>%
   group_by(Agency) %>%
-  summarize(Trips = round(sum(JUN19) / 1000, 0)) %>%
+  summarize(trips = sum(trips)) %>%
+  arrange(desc(trips)) %>%
+  mutate(color = color_pal(n())) %>%
+  select(-trips)
+upt_tbl <- upt_tbl %>%
+  left_join(color_tbl, by = "Agency")
+```
+
+```{r}
+# convenience functions
+
+# shortens the agency name to the first 4 characters. Improves legend.
+shorten_agency <- function(Agency){
+  Agency = gsub("[^a-zA-Z0-9 _]", "", Agency)
+  word_count = str_count(Agency, "\\W+") + 1
+  agency_short = word(Agency, 1, pmin(word_count, 4))
+  return(agency_short)
+}
+
+# Create a function that performs seasonal decomposition
+extract_trend <- function(x, start_year) {
+  myts <- ts(x, start = c(start_year, 1), end = c(2019, 6), frequency = 12)
+  fit <- stl(myts, s.window="period")  
+  df <- as.data.frame(fit$time.series)
+  return(df$trend)
+}
+```
+
+Before talking about national transit trends, it's important to grasp the size
+of the NYC market. The chart below shows the top 10 transit agencies by monthly
+ridership (June 2019 unlinked trips). NYC dwarfs the other transit markets, and
+for this post, is set aside as an outlier.
+
+```{r, out.width="100%", warning=FALSE}
+data1 <- upt_tbl %>%
+  filter(month_year == "JUN19") %>%
+  group_by(Agency) %>%
+  summarize(Trips = sum(trips, na.rm = TRUE)) %>%
   arrange(desc(Trips)) %>%
   head(10) %>%
   arrange(Trips) %>%
-  mutate(
-    word_count = str_count(Agency, "\\W+") + 1,
-    min = pmin(word_count, 4),
-    Agency = word(Agency, 1, pmin(word_count, 4)),
-    Agency = gsub(",", "", Agency)
-  )
+  mutate(Agency = shorten_agency(Agency))
 
 plot_ly(
-  data, y = ~Agency, x = ~Trips, type = "bar", orientation = "h",
+  data1, y = ~Agency, x = ~Trips, type = "bar", orientation = "h",
   text = data$Agency, textposition = "auto", hoverinfo = 'x'
 ) %>%
   layout(
+    title = "Top 10 Transit Agencies (trips)",
     yaxis = list(
       categoryorder = "array",
-      categoryarray = ~Trips,
+      categoryarray = ~Agency,
       showticklabels = FALSE
     )
   )
 ```
 
+So what's going on outside of NYC? Here is the raw data of transit ridership
+over time by agency. We'll need to do some further processing before any
+useful information can be extracted.
+
+```{r, out.width="100%", warning=FALSE}
+data2 <- upt_tbl %>%
+  filter(Agency != "MTA New York City Transit") %>%
+  group_by(Agency, date) %>%
+  summarize(
+    trips = sum(trips, na.rm = TRUE),
+    color = first(color)
+  ) %>%
+  arrange(Agency, date) %>%
+  ungroup() %>%
+  mutate(Agency = shorten_agency(Agency))
+  
+plot_ly(
+  data2, x = ~date, y = ~trips, type = "scatter", mode = "lines",
+  color = ~Agency, colors = ~unique(color)
+) %>%
+  layout(
+    showlegend = FALSE
+  )
+```
+
+## Collapsing Agencies
+
+A histogram of June 2019 ridership tells us that there are a few
+agencies between 10 and 40 million monthly trips, several between 2 and 10
+million, and then the large majority of agencies are below 2 million monthly
+trips.
+
+```{r}
+data3 <- upt_tbl %>%
+  filter(month_year == "JUN19", Agency != "MTA New York City Transit") %>%
+  group_by(Agency) %>%
+  summarize(Trips = sum(trips, na.rm = TRUE))
+
+plot_ly(
+  data3, x = ~Trips, type = "histogram", nbinsx = 30
+)
+```
+
+To make the time series charts more legible, we'll collapse agencies under 2
+million into a single agency and display their median ridership. We'll create
+another median agency representing agencies between 2 and 10 million.
+
+## Seasonality
+
+Understanding transit ridership is also complicated by the seasonal nature of
+it. For most agencies, ridership is low in December and January and peaks around
+October. Removing these seasonal variations helps us understand the underlying
+trends. The chart below shows the monthly ridership for the Chicago Transit
+Authority. The actual ridership is shown by the jagged line while the trend is
+highlighted in orange. The trend line makes it clear that (seaonally adjusted)
+ridership peaked in April of 2012. As a point of reference, the vertical green
+line marks when Uber began service in Chicago.
+
+```{r}
+data4 <- upt_tbl %>%
+  filter(Agency == "Chicago Transit Authority") %>%
+  group_by(Agency, date) %>%
+  summarize(
+    trips = sum(trips, na.rm = TRUE),
+    color = first(color)
+  ) %>%
+  mutate(trend = extract_trend(trips, 2002))
+
+plot_ly(data4) %>%
+  add_trace(
+    x = ~date, y = ~trips, type = "scatter", mode = "lines",
+    alpha = .33, name = "seasonal", color = ~Agency, colors = ~unique(color)
+  ) %>%
+  add_trace(
+    x = ~date, y = ~trend, type = "scatter", mode = "lines",
+    name = "trend", alpha = 1
+  ) %>%
+  add_trace(
+    x = c(ymd("2011-09-01"), ymd("2011-09-01")),
+    y = c(0, 52000000),
+    type = "scatter", mode = "lines", name = "Uber in CHI",
+    hoverinfo = "text", hovertext = "Uber Starts",
+    showlegend = FALSE
+  ) %>%
+  layout(
+    title = "Chicago Transit Authority Ridership",
+    yaxis = list(rangemode = "tozero"),
+    annotations = list(
+      x = ymd("2011-09-01"), y = 35000000, text = "Uber Starts",
+      xref = "x", yref = "y",
+      showarrow = TRUE, ax = 40, ay = 25
+    )
+  )
+```
+
+The chart below tells a fairly concise story about what is happening to transit
+ridership. The medium markets like Chicago began seeing declines in ridership
+between 2012 and 2014, and this trend has has continued. This is the same time
+frame when Uber and Lyft began showing up in these cities.
+
+```{r}
+data5 <- upt_tbl %>%
+  filter(
+    Agency != "MTA New York City Transit",
+    date >= ymd("2010-01-01")
+  ) %>%
+  group_by(Agency, date) %>%
+  summarize(
+    trips = sum(trips, na.rm = TRUE),
+    color = first(color)
+  ) %>%
+  arrange(Agency, date) %>%
+  mutate(current_ridership = last(trips)) %>%
+  ungroup() %>%
+  mutate(
+    Agency = case_when(
+      current_ridership <= 2000000 ~ "Under 2M",
+      current_ridership <= 10000000 ~ "2M to 10M",
+      TRUE ~ Agency
+    )
+  ) %>%
+  group_by(Agency, date) %>%
+  summarize(
+    trips = median(trips),
+    color = first(color)
+  ) %>%
+  mutate(trend = extract_trend(trips, 2010)) %>%
+  ungroup()
+
+plot_ly(data5) %>%
+  add_trace(
+    x = ~date, y = ~trend, type = "scatter", mode = "lines",
+    color = ~Agency, colors = ~unique(color),
+    text = ~Agency, hoverinfo = "text",
+    showlegend = FALSE
+  )
+```
+
+The small (<10 million) and tiny (<2 million) agencies look relatively stable in
+the chart above, but that is mainly due to the scale of the graph. The charts
+below zoom in to provide a more accurate picture. The median ridership in these
+markets is also falling. The decline in the tiny markets is noticeably later.
+One theory could be that Uber/Lyft simply arrived in these regions later.
+
+```{r}
+data6 <- data5 %>%
+  filter(Agency %in% c("Under 2M", "2M to 10M"))
+
+p1 <- plot_ly(data5 %>% filter(Agency == "2M to 10M")) %>%
+  add_trace(
+    x = ~date, y = ~trend, type = "scatter", mode = "lines",
+    color = ~Agency, colors = ~unique(color),
+    text = ~Agency, hoverinfo = "text"
+  ) %>%
+  layout(yaxis = list(rangemode = "tozero"))
+
+p2 <- plot_ly(data5 %>% filter(Agency == "Under 2M")) %>%
+  add_trace(
+    x = ~date, y = ~trend, type = "scatter", mode = "lines",
+    color = ~Agency, colors = ~unique(color),
+    text = ~Agency, hoverinfo = "text"
+  ) %>%
+  layout(yaxis = list(rangemode = "tozero"))
+
+subplot(p1, p2)
+```
+
+The Uber/Lyft connection seems obvious, but this post has not done the work
+required to say anything for sure. In a future post, I hope to look at the link
+in more detail. This goal of this post was primarily to provide insight into
+what is happening with transit ridership.
+
+## Reproducibility
+Reproduce what you see above and take it further!
