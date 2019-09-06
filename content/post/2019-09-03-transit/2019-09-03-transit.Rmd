@@ -12,7 +12,6 @@ image:
 projects: ""
 editor_options: 
   chunk_output_type: console
-draft: true
 ---
 
 ```{r setup, include=FALSE}
@@ -207,7 +206,8 @@ With the above modifications in place, the chart below tells a fairly concise
 story about what is happening to transit ridership. Medium markets like
 Chicago began seeing declines in ridership between 2012 and 2014, and this trend
 has has continued. This is the same time frame when Uber and Lyft began showing
-up in these cities.
+up in these cities. While not enough to say that these companies caused the
+decline, it is certainly interesting.
 
 ```{r}
 data5 <- upt_tbl %>%
@@ -278,7 +278,7 @@ subplot(p1, p2)
 
 The Uber/Lyft connection seems obvious, but this post has not done the work
 required to say anything for sure. In a future post, I hope to look at the link
-in more detail. This goal of this post was primarily to provide insight into
+in more detail. The goal of this post was primarily to provide insight into
 what is happening with transit ridership.
 
 ## Reproducibility
