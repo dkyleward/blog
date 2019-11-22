@@ -314,9 +314,31 @@ public_demo_summary <- wake_public_demo_tbl %>%
   select(-students) %>%
   spread(key = race, value = percent)
 
+public_lunch_file <- here(
+  "static", "data", "2019-11-15-picking-a-school",
+  "public_school_demographics", "nces_lunch_program_data_nc.zip"
+)
+public_lunch_tbl <- read_csv(public_lunch_file)
+public_lunch_summary <- wake_public_demo_tbl %>%
+  filter(TOTAL_INDICATOR == "Education Unit Total") %>%
+  select(school = SCH_NAME, all_students = STUDENT_COUNT) %>%
+  left_join(
+    public_lunch_tbl %>%
+      filter(LUNCH_PROGRAM == "No Category Codes") %>%
+      select(school = SCH_NAME, lunch_students = STUDENT_COUNT),
+    by = "school"
+  ) %>%
+  mutate(
+    `Free Lunch` = round(lunch_students / all_students * 100, 1),
+    `Paid Lunch` = round(100 - `Free Lunch`, 1)
+  ) %>%
+  select(school, `Free Lunch`, `Paid Lunch`)
+  
+
 public_demo_shp <- combined_shp %>%
   left_join(public_demo_summary, by = "school") %>%
-  filter(!is.na(Asian))
+  filter(!is.na(Asian)) %>%
+  left_join(public_lunch_summary, by = "school")
 public_demo_tbl <- public_demo_shp %>%
   as.data.frame() %>%
   select(-geometry)
@@ -382,7 +404,7 @@ get_center <- function(layer){
 }
 ```
 
-```{r}
+```{r, race map}
 colors <- brewer.pal(5, "Set1")
 center <- get_center(public_demo_shp)
 
@@ -428,6 +450,52 @@ leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
   )
 ```
 
+```{r, lunch map}
+colors <- brewer.pal(3, "Set2")
+
+leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
+  addTiles(
+    urlTemplate = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  ) %>%
+  setView(center$long - 0.05, center$lat, zoom = 11) %>%
+  addMinicharts(
+    public_demo_shp$long, public_demo_shp$lat,
+    type = "pie",
+    chartdata = public_demo_shp %>%
+      as.data.frame() %>%
+      select(`Free Lunch`, `Paid Lunch`),
+    popup = popupArgs(
+      supValues = public_demo_shp %>%
+        as.data.frame() %>%
+        select(Type)
+    ),
+    colorPalette = colors,
+    width = 20,
+    layerId = public_demo_shp$school
+  ) %>%
+  addCircleMarkers(
+    data = public_demo_shp,
+    label = public_demo_shp$school,
+    labelOptions = labelOptions(
+      noHide = T,
+      textOnly = TRUE,
+      textsize = "5px",
+      direction = "top",
+      maxZoom = 10
+    ),
+    radius = 1,
+    stroke = FALSE,
+    fillOpacity = 0,
+    group = "labels"
+  ) %>%
+  addLayersControl(
+    overlayGroups = c("labels"),
+    options = layersControlOptions(collapsed = FALSE, position = "topleft")
+  )
+```
+
+
 Luckily, state scores are available for different demographics (race, gifted,
 etc.). This facilitates making fair comparisons.
 
@@ -472,9 +540,10 @@ Sticking with my decision above to favor EOG scores over EVAAS, Penny Road
 appears to do slightly better than Oak Grove, but the charter school scores
 better than either (and on both metrics).
 
-The chart below shows the EOG scores by school and race. Black and hispanic
-students get the best scores at Peak while white students score higher at Penny
-Road.
+The chart below shows the EOG scores by school and subgroup. In short, every
+subgroup scores better at Peak Charter except for white students. Compared to
+the difference in other subgroups, the difference in the white subgroup is small
+and white students perform well in all three schools.
 
 ```{r}
 chart_eog <- eog_tbl_filtered %>%
@@ -491,24 +560,27 @@ chart_tbl <- chart_eog %>%
   ) %>%
   filter(!is.na(growth_status))
 
-race_chart <- chart_tbl %>%
+subgroup_chart <- chart_tbl %>%
   filter(
-    subgroup %in% c("White", "Black", "Hispanic"),
+    # subgroup %in% c("White", "Black", "Hispanic"),
+    subgroup != "Academically or Intellectually Gifted",
     school %in% local_public_schools
   ) %>% mutate(
-    # x_label = map(function(x) word(x)[1], school)
+    subgroup = factor(
+      subgroup,
+      levels = c(
+        "Asian", "Black", "Hispanic", "White",
+        "English Learner", "Economically Disadvantaged",
+        "Students With Disabilities", "All Students"
+      )
+    ),
     x_label = map_chr(school, function(x) word(x)[1])
   )
 
-ggplot(data = race_chart) +
-  # geom_point(aes(x = pct_4, y = growth_index, color = subgroup)) +
+ggplot(data = subgroup_chart) +
   geom_bar(aes(x = x_label, y = pct_4, fill = subgroup), stat = "identity") +
-  # geom_text(
-  #   aes(x = pct_4, y = growth_index, label = school),
-  #   check_overlap = TRUE, size = 3, nudge_y = .2
-  # ) +
-  facet_wrap(vars(subgroup)) +
-  ggtitle("EOG Scores by Race") +
+  facet_wrap(vars(subgroup), nrow = 2) +
+  ggtitle("EOG Scores by Subgroup") +
   xlab("School") + 
   ylab("EOG CCR") +
   guides(fill = FALSE)
