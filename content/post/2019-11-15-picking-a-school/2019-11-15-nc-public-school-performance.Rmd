@@ -1,5 +1,5 @@
 ---
-title: Choosing a School in NC
+title: Choosing a School in Wake County
 author: Kyle Ward
 date: '2019-11-15'
 slug: nc-public-school-performance
@@ -34,19 +34,19 @@ library(leafsync)
 library(RColorBrewer)
 ```
 
-My oldest is entering Kindergarten next year, and I wanted to answer two big
+My oldest is entering Kindergarten next year, and I want to answer two big
 questions:
 
   * What are the best public schools he can attend?
   * Are the private options worth the cost?
 
 What follows in this article is my dive into the deep end of school performance
-metrics and how I used them to make an informed decision (hopefully). Of course,
-the choice of school depends on a lot more than test scores, but they were an
-important part of my decision.
+metrics and how I use them to make what is hopefully an informed decision. Of
+course, the choice of school depends on more than test scores, but they are a
+critical consideration.
 
-It is also my hope that this post introduces helpful resources to others making
-the same choice.
+It is also my hope that this post introduces helpful resources to others going
+through the same process. All of my sources and data are listed at the bottom.
 
 ```{r, message=FALSE, warning=FALSE}
 ## Test Scores ##
@@ -170,39 +170,40 @@ by the State, you'll see that they each have two metrics.
     * Measured by the Education Value-Added Assessment System (EVAAS)
     * Represented by the color of the school
     
-I was familiar with the EOG tests. I took them as a kid, and it's a pretty
-straight-forward measure to interpret. An "A" means that kids got a lot of
-questions right and an "F" means they didn't.
+I'm familiar with the EOG tests. I took them as a kid, and the letter grade for
+each school is a pretty straight-forward measure to interpret. An "A" means that
+kids got a lot of questions right and an "F" means they didn't.
 
-The growth score was new to me, but given how prominent the color of the school
-was compared to it's letter grade, it seemed important.
+The growth score is new to me, but given how prominent the color of the school
+is compared to it's letter grade, it seems important.
 
 ### Should I consider growth scores?
 
-When I started, student growth seemed the most important factor. Consider two 
-third grade teachers:
+Student growth appears to be a better measure than just performance. Consider
+two teachers:
 
-  * Teacher A:
+  * Teacher A
     * Starts off with a class of children reading at a first grade level.
     * At year end, they are reading at a third grade level.
-  * Teacher B:
+  * Teacher B
     * Starts off with a class of children reading at a fourth grade level.
     * At year end, they are still reading at a fourth grade level.
 
-Based on the EOG exam, Teacher B would look better because her children can read at
-a fourth grade level. Looking at student growth would reveal that Teacher A
-accomplished much more during the school year.
+Based on the EOG exam, Teacher B looks better because her children can read at a
+fourth grade level. Looking at student growth reveals that Teacher A is actually
+doing a better job.
 
 The goal of EVAAS and other [value-added
 modeling](https://en.wikipedia.org/wiki/Value-added_modeling) is to isolate the
-role of the teacher in a student's growth and control for things like
-socio-economic status or previous competency level.
+role of the teacher in student learning and control for things like socio-economic
+status or previous competency level.
 
-My first scatter plot of schools compared their EOG and growth scores. Along the
-x-axis is the percent of students that scored above level four on the EOG
-(College and Career Ready or CCR). The y-axis shows the growth index where
-scores between -2 and 2 mean that students were learning at the expected rate.
-Schools above 2 exceeded expectations while schools below 2 fell short.
+The scatter plot below compares school EOG and growth scores. It includes all
+schools in Wake County that offer elementary grades. Along the x-axis is the
+percent of students that scored at or above level four on the EOG (College and
+Career Ready or CCR). The y-axis shows the growth index where scores between -2
+and 2 mean that students were learning at the expected rate. Schools above 2
+exceeded growth expectations while schools below 2 fell short.
 
 ```{r}
 chart_eog <- eog_tbl_filtered %>%
@@ -257,13 +258,16 @@ p <- plot_ly() %>%
 p
 ```
 
-There is a relationship between the two test scores (represented by the dashed
-blue line), but it wasn't as strong as I expected. After digging through several
-locations online, I was unable to get more than a general impression of how the
-EVAAS scores were calculated. I was unable to find a statistical model or
-documentation published by SAS (creators of EVAAS). I reached out to a teacher
-friend of mine and quickly learned that I wasn't the only one. Teachers are in
-the dark like everyone else, and they aren't happy about it.
+The relationship between the two test scores is represented by the dashed
+blue line, but it isn't very strong (R<sup>2</sup> = .12). It suggests there is
+only a minor relationship between performance and growth, which is
+counter-intuitive to me. It may be right, but warrants further investigation.
+
+Unfortunately, I was unable to find more than vague references to how the EVAAS
+scores were calculated. I can't find a statistical model or published
+documentation from SAS (creators of EVAAS). I asked a teacher friend of mine and
+quickly learned that I wasn't the only one. Teachers are in the dark like
+everyone else, and they aren't happy about it.
 
 Undocumented statistical models raise several flags. Perhaps there is validation
 work I've not seen demonstrating that the models can be trusted, but I decided
@@ -272,26 +276,27 @@ point of reference.
 
 ### Data on private schools
 
-One thing I learned quickly was that the EOG and EVAAS scoring didn't apply to
-private schools, which complicated the comparisons. The private schools I
-contacted all used the [Iowa Test of Basic
+Another thing I learned was that the EOG and EVAAS don't apply to
+private schools, which complicates comparisons. The private schools I contacted
+all use the [Iowa Test of Basic
 Skills](https://en.wikipedia.org/wiki/Iowa_Assessments) (ITBS). Some were more
-forthcoming with their scores than others, but it made a systematic comparison
-among private schools difficult. I also discovered the National Assessment of
+forthcoming with their scores than others, and a systematic comparison of
+private schools was difficult. I also discovered the National Assessment of
 Educational Progress ([NAEP](https://nces.ed.gov/nationsreportcard/)), which is
-administered to both private and public schools in 4<sup>th</sup>,
-8<sup>th</sup> and 12<sup>th</sup> grades. Unfortunately, viewing data by
-school is restricted.
+administered to both private and public schools in fourth, eighth and twelfth
+grades, but viewing data by school requires a license.
 
 ## School demographics
 
-The test scores above are for the school as a whole. Several studies, including
-one using the NAEP data, suggest that achievement differences between schools
-are due more to demographic differences than anything else
+The test scores in the scatter plot above are for the schools as a whole.
+Several studies, including one using the NAEP data, suggest that achievement
+differences between schools are due more to demographic differences than
+anything else
 ([link](https://nces.ed.gov/nationsreportcard/pubs/studies/2006461.asp)). This
-means that understanding the makeup of schools is crucial. There are several
-online sources that show the demographics of individual schools
-([example](https://www.greatschools.org/)), but I found it useful to map the
+may justify the weak relationship between EVAAS and EOG scores. It definitely
+means that school composition is critical. There are several online sources that
+show the demographics of individual schools
+([example](https://www.greatschools.org/)), but I found it helpful to map the
 data to see many at once.
 
 ```{r, message=FALSE, warning=FALSE}
@@ -515,17 +520,18 @@ leaflet(width = "100%", options = leafletOptions(zoomControl = FALSE)) %>%
   )
 ```
 
-The schools were indeed very different, and that had to be taken into account
-to make a fair comparison.
-
 ## Breaking down test scores
 
-Before breaking down test scores further, I first narrowed the list of schools
-to those near my home. While we could attend any charter or private school,
+The school demographics are very different, which limits the usefulness of
+aggregate school metrics. What is needed is to compare students from similar
+groups between schools.
+
+Before breaking down test scores further, I narrowed the list of schools to
+those near my home. While we can attend any charter or private school,
 proximity makes the daily routine much more convenient and allows me to be more
 active in the school.
 
-These are the schools I investigated further:
+These are the schools I investigated in more detail:
 
   * Penny Road (public - our traditional calendar option)
   * Oak Grove (public - our year round option)
@@ -535,8 +541,8 @@ These are the schools I investigated further:
 
 ### Public options
 
-First, it seemed like a good idea to see where the public schools fell on the
-scatter chart from earlier.
+First, it is helpful to see where the public schools fall on the scatter chart
+from earlier.
 
 ```{r}
 local_public_schools <- c(
@@ -563,10 +569,10 @@ were:
   2. Penny Road
   3. Oak Grove
 
-The chart below shows the EOG scores by school and subgroup. In short, every
-subgroup scored better at Peak Charter except for white students. Further, the
-difference in white students is small compared to how well they perform at all
-three schools.
+The chart below breaks down the EOG scores by school and student subgroup. In
+short, every subgroup scored better at Peak Charter except for white students.
+Further, the difference in white students is small compared to how well they
+perform at all three schools.
 
 ```{r}
 chart_eog <- eog_tbl_filtered %>%
@@ -610,9 +616,9 @@ ggplot(data = subgroup_chart, aes(x = x_label, y = pct_4, fill = subgroup, label
   guides(fill = FALSE)
 ```
 
-The second chart shows the EVAAS growth index broken down in the same manor.
-While I decided to put less emphasis on it, it was worth a review, and Peak
-was the clear winner here, too.
+The second chart shows the EVAAS growth index broken down in the same manner.
+While I decided to put less emphasis on it, it is worth a review. Peak is the
+clear winner here, too.
 
 ```{r}
 ggplot(data = subgroup_chart, aes(x = x_label, y = growth_index, fill = subgroup, label = growth_index)) +
@@ -625,31 +631,30 @@ ggplot(data = subgroup_chart, aes(x = x_label, y = growth_index, fill = subgroup
   guides(fill = FALSE)
 ```
 
-
 ### Private options
 
 Thales provided their ITBS scores. Kindergartners scored better than 94% of the
 students nationwide while fifth graders scored better than 82%. The decline was
-concerning, but there are many potential explanations (e.g. new students
-joining Thales in fifth grade).
+concerning, but there could be several explanations (e.g. new students
+joining Thales in later grades that are behind).
 
 Resurrection Lutheran did not provide detailed scores, but they did provide a
-copy of their letter to parents from last year. Their students also did well,
+copy of their letter to parents from last year. Their students did very well,
 with most classes scoring at 90% or above.
 
 ## Comparing public and private
 
-The easy decision was to select Peak Charter Academy as our preferred public
-school option. Of course, admission to Peak is done by lottery, so it isn't
+The easy decision is to select Peak Charter Academy as the preferred public
+option. Of course, admission to Peak is done by lottery, so it isn't
 guaranteed.
 
-The hard part was to judge if the private schools were worth the money. It is
+It is harder to judge if the private schools are worth the money. It is
 impossible to compare private to public directly given the different tests
 used.
 
-By researching the history of testing in NC, I realized the ITBS was used by
-North Carolina until the 2001-2002 school year. Private schools are still
-required to do yearly testing using national tests like ITBS.
+While researching the history of testing in NC, I realized the ITBS was used by
+North Carolina until the 2001-2002 school year. While private schools are still
+required to do yearly testing, they stopped for public schools.
 
 > The Iowa Tests of Basic Skills (ITBS) will be eliminated from the North Carolina
 state testing program beginning in the 2001-02 school year. The basis of this
@@ -661,15 +666,16 @@ Figure 13 from the same report shows the ITBS scores from 1996-2001.
 
 ![](/img/2019-11-15-picking-a-school/historical_nc_itbs_scores.png)
 
-These scores weren't encouraging, but it's important to remember that they are
-statewide scores. Based on my research, I expected the scores from Wake
-County to be higher than the state average. I also expected Penny Road, Peak
-Charter, and Oak Grove to be higher than the average for Wake County, but
-guessing where they would score today was impossible.
+These scores aren't encouraging, but it's important to remember that they are
+statewide scores. Based on my research, I expect the scores from Wake County to
+be higher than the state average and the scores for Apex schools to be higher
+than the average for Wake County. Still, guessing where they would score today
+is impossible.
 
-The private schools had higher scores, but were skewed toward Asian and White
-students, which are high-performing across the county. It was hard
-to say how much of the ITBS scores were due to simple demographics.
+The private schools certainly had high ITBS scores last year, but their
+attendance is heavily skewed toward Asian and White students. These are the
+highest-performing demographic across the county. It is hard to say how much of
+the ITBS scores are due to simple demographics.
 
 ## Conclusion
 
