@@ -1,0 +1,537 @@
+---
+title: NC Public School Performance
+author: Kyle Ward
+date: '2019-11-15'
+slug: nc-public-school-performance
+categories:
+  - R
+tags:
+  - R
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2019-11-15T16:52:45-05:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+draft: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(here)
+library(plotly)
+library(sf)
+library(leaflet)
+library(leaflet.minicharts)
+library(RColorBrewer)
+```
+
+My oldest is entering kindergarten next year, and I wanted to answer two big
+questions:
+
+  * What are the best public schools he can attend?
+  * Are the private options worth the cost?
+
+What follows in this article is my dive into the deep end of school performance
+metrics, and I used them to make, what I hope is, an informed decision.
+
+Good primer with general info:
+http://www.ncpublicschools.org/docs/accountability/reporting/2018/documentation/chrtgrdrt18.pdf
+
+
+
+```{r, message=FALSE, warning=FALSE}
+## Test Scores ##
+
+growth_csv <- here(
+  "static", "data", "2019-11-15-picking-a-school", "test_results",
+  "school_growth.zip"
+)
+growth_tbl <- read_csv(growth_csv) %>%
+  select(
+    board = `State Board Region`,
+    district = `District Name`,
+    school = `School Name`,
+    grade = `Grade Span`,
+    subgroup = Subgroup,
+    growth_type = `School Growth Type`,
+    growth_status = `School Growth Status`,
+    growth_index = `School Growth Index Score`
+  )
+eog_csv <- here(
+  "static", "data", "2019-11-15-picking-a-school", "test_results",
+  "combined_eog.zip"
+)
+eog_tbl <- read_csv(eog_csv) %>%
+  select(
+    district = `District Name`,
+    school = `School Name`,
+    subgroup = Subgroup,
+    grade = Subject,
+    pct_4 = `Percent\nLevel 4 and Above\n(CCR)`
+  ) %>%
+  mutate(
+    pct_4 = ifelse(pct_4 == ">95", 95, pct_4),
+    pct_4 = ifelse(pct_4 == "<5", 5, pct_4),
+    pct_4 = as.numeric(pct_4)
+  )
+
+
+  ## Shapefiles ##
+
+# I downloaded the public school shapefile here:
+# https://data-nconemap.opendata.arcgis.com/datasets/public-schools
+# It does not include charter schools.
+public_file <- here(
+  "static", "data", "2019-11-15-picking-a-school", "public_school_shapefile",
+  "Public_Schools.shp"
+)
+public_shp <- st_read(public_file, quiet = TRUE) %>%
+  filter(COUNTY == "Wake") %>%
+  st_transform(4326) %>%
+  mutate(Type = "Public")
+
+# Charter shapefile
+# I downloaded a list of charter schools and addresses from here:
+# http://www.ncpublicschools.org/charterschools/schools/
+# I geocoded them into the shapefile you see in the repo.
+charter_file <- here(
+  "static", "data", "2019-11-15-picking-a-school", "charter_school_shapefile",
+  "Charter_Schools.shp"
+)
+charter_shp <- st_read(charter_file, quiet = TRUE) %>%
+  filter(COUNTY == "Wake") %>%
+  st_transform(4326) %>%
+  mutate(Type = "Public Charter")
+
+# Combine them into one shapefile
+combined_shp <- rbind(
+  public_shp %>% select(school = SCHOOL_NAM, Type), 
+  charter_shp %>% select(school = SCHOOL, Type)
+)
+latlong <- st_coordinates(combined_shp) %>%
+  as.data.frame()
+combined_shp$long <- latlong$X
+combined_shp$lat <- latlong$Y
+
+# Private shapefile
+private_file <- here(
+  "static", "data", "2019-11-15-picking-a-school", "nonpublic_school_shapefile",
+  "NonPublic_Schools.shp"  
+)
+private_shp <- st_read(private_file, quiet = TRUE) %>%
+  filter(County == "Wake") %>%
+  st_transform(4326) %>%
+  mutate(Type = "Private")
+
+
+```
+
+```{r}
+# Determine which schools include elementary grades
+elementary_schools <- eog_tbl %>%
+    filter(grade %in% paste(rep("Grade", 3), 3:5))
+elementary_schools <- unique(elementary_schools$school)
+
+# filter the EOG tables to just elementary schools in Wake County
+eog_tbl_filtered <- eog_tbl %>%
+  filter(
+    district == "Wake County Schools" | school %in% charter_shp$SCHOOL,
+    school %in% elementary_schools
+  )
+```
+
+## Two main testing metrics
+
+If you look at the [report cards](https://ncreportcards.ondemand.sas.com/src/?viewSelect=county&year=2018&type=Both&level=All&district=410&lng=en&currpage=1&county=wake) prepared for Wake County schools
+by the State, you'll see that they each have two metrics.
+
+  * A performance score
+    * Measured by End of Grade tests (EOG)
+    * Represented by the letter grade of the school.
+  * A growth score
+    * Measured by the Education Value-Added Assessment System (EVAAS)
+    * Represnted by the color of the school
+    
+I was familiar with the EOG tests. I took them as a kid, and it's a pretty
+straight-forward measure to interpret. An "A" means that kids got a lot of
+questions right and an "F" means they didn't.
+
+The growth score was new to me, but given how prominent the color of the school
+was compared to it's letter grade, it seemed important.
+
+### Should I consider growth scores?
+
+When I started, student growth seemed the most important factor. Consider two 
+third grade teachers:
+
+  * Teacher A:
+    * Starts off with a class of children reading at a first grade level.
+    * At year end, they are reading at a third grade level.
+  * Teacher B:
+    * Starts off with a class of children reading at a fourth grade level.
+    * At year end, they are still reading at a fourth grade level.
+
+Based on the EOG exam, Teacher B would look better because her children can read at
+a fourth grade level. Looking at student growth should give better insights
+into teacher performance.
+
+The goal of EVAAS and other [value-added
+modeling](https://en.wikipedia.org/wiki/Value-added_modeling) is to isolate the
+role of the teacher in a student's growth and control for things like the
+student's socio-economic status or previous competency level.
+
+My first scatter plot of schools compared their EOG and growth scores. Along the
+x-axis is the percent of students that scored above level four on the EOG. Level
+4 is "College and Career Ready" (CCR). The y-axis shows the growth score. Scores
+between -2 and 2 mean that students were learning at the rate that was expected.
+Schools above 2 exceeded this growth while schools below 2 saw students growing
+slower than expected.
+
+```{r}
+chart_eog <- eog_tbl_filtered %>%
+  filter(
+    subgroup == "All Students",
+    grade == "All Subjects"
+  )
+chart_growth <- growth_tbl %>%
+  filter(subgroup == "All Students", growth_type == "Overall")
+chart_tbl <- chart_eog %>%
+  left_join(
+    chart_growth %>% select(district, school, growth_status, growth_index),
+    by = c("district", "school")
+  ) %>%
+  filter(!is.na(growth_status))
+
+# Estimate a simple linear model (removing some of the low outliers)
+mod <- lm(
+  growth_index ~ pct_4,
+  data = chart_tbl %>%
+    filter(growth_index > -7.07)
+)
+m <- coefficients(mod)["pct_4"]
+b <- coefficients(mod)["(Intercept)"]
+temp_df <- tibble(
+  x = c(12, 92.7),
+  y = m * x + b
+)
+
+p <- plot_ly() %>%
+  add_trace(
+    data = chart_tbl, x = ~pct_4, y = ~growth_index, type = "scatter",
+    mode = "markers", text = ~school, color = ~growth_status
+  ) %>%
+  add_trace(
+    data = temp_df, x = ~x, y = ~y, type = "scatter", mode = "lines",
+    showlegend = FALSE, line = list(dash = "dash", color = "blue")
+  ) %>%
+  add_annotations( 
+    text="Growth Target", xref="paper", yref="paper",
+    x=1.0, xanchor="left",
+    y=0.8, yanchor="bottom",    # Same y as legend below
+    legendtitle=TRUE, showarrow=FALSE 
+  ) %>%  
+  layout(
+    title = "Schools by EOG Level 4 and EVAAS Growth Index",
+    yaxis = list(title = "Growth Index"),
+    xaxis = list(title = "EOG CCR"),
+    legend=list(y=0.8, yanchor="top" )
+  )
+
+p
+```
+
+There is a relationship between the two test scores (represented by the dashed
+blue line), but the correlation was slight. For the most part, the
+schools with the lowest EOG scores failed to meet their growth targets, and the
+schools with the best EOG scores met or exceeded them. With that said, the schools
+are scattered around widely.
+
+After digging through several locations online, I was unable to get more than
+a general impression of how the growth targets were forecasted for a student. I
+was unable to find a statistical model published by SAS (creators of EVAAS). I
+reached out to a teacher friend of mine and quickly learned what teachers
+thought of EVAAS. To put it politely: they don't like it. One of the biggest
+reasons behind this was a lack of transparency of how the scores were generated.
+Apparently, I'm not the only one who couldn't figure it out.
+
+Undocumented statistical models raise several flags. Perhaps
+there is validation work I've not seeing demonstrating that the models can be
+trusted, but I decided to put more weight on the EOG scores and use the EVAAS
+system as another point of reference (e.g. to break ties).
+
+### ITBS
+
+One thing I learned quickly was that the EOG and EVAAS scoring didn't apply to
+private schools, which complicated the comparisons. The private schools I
+contacted all used the [Iowa Test of Basic
+Skills](https://en.wikipedia.org/wiki/Iowa_Assessments) (ITBS), which at least
+facilitated comparisons between private schools. I'll use these below.
+
+### Digging Deeper
+
+The scores above are for the school as a whole. The socio-economic mix of schools
+is often a large factor in these overall scores. This means that understanding
+the makeup of schools. As in our example when considering growth scores, an
+excellent school may be in a disadvantaged area and look worse based on EOGs
+alone. The map below shows a breakdown of every public, public charter, and
+private school in Wake County. Click on a pie chart to see the stats as well
+as the school type.
+
+```{r, message=FALSE, warning=FALSE}
+# Prepare a shapefile of demographic info for public schools
+
+public_demo_file <- here(
+  "static", "data", "2019-11-15-picking-a-school",
+  "public_school_demographics", "nces_demographic_data_nc.zip"
+)
+public_demo_tbl <- read_csv(public_demo_file)
+wake_public_demo_tbl <- public_demo_tbl %>%
+  filter(SCH_NAME %in% chart_tbl$school)
+public_demo_summary <- wake_public_demo_tbl %>%
+  mutate(
+    RACE_ETHNICITY = case_when(
+      RACE_ETHNICITY == "American Indian or Alaska Native" ~ "Other",
+      RACE_ETHNICITY == "Black or African American" ~ "Black",
+      RACE_ETHNICITY == "Hispanic/Latino" ~ "Hispanic",
+      RACE_ETHNICITY == "Native Hawaiian or Other Pacific Islander" ~ "Other",
+      RACE_ETHNICITY == "Two or more races" ~ "Other",
+      RACE_ETHNICITY == "Not Specified" ~ "Other",
+      TRUE ~ RACE_ETHNICITY
+    )
+  ) %>%
+  group_by(school = SCH_NAME, race = RACE_ETHNICITY) %>%
+  summarize(students = sum(STUDENT_COUNT, na.rm = TRUE)) %>%
+  filter(race != "No Category Codes") %>%
+  mutate(percent = round(students / sum(students) * 100, 1)) %>%
+  select(-students) %>%
+  spread(key = race, value = percent)
+
+public_demo_shp <- combined_shp %>%
+  left_join(public_demo_summary, by = "school") %>%
+  filter(!is.na(Asian))
+public_demo_tbl <- public_demo_shp %>%
+  as.data.frame() %>%
+  select(-geometry)
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Prepare a shapefile of demographic info for private schools with elementary
+# grades.
+
+private_demo_file <- here(
+  "static", "data", "2019-11-15-picking-a-school",
+  "private_school_demographics", "pss1718_pu_csv.zip"  
+)
+private_demo_tbl <- read_csv(private_demo_file)
+wake_private_demo_tbl <- private_demo_tbl %>%
+  filter(PCNTNM == "WAKE") %>%
+  replace(is.na(.), 0) %>%
+  mutate(k5_students = rowSums(.[paste0("P", seq(160, 230, 10))])) %>%
+  filter(k5_students > 0)
+
+private_demo_summary <- wake_private_demo_tbl %>%
+  select(
+    school = PINST,
+    Indian = P_INDIAN,
+    Asian = P_ASIAN,
+    Pacific = P_PACIFIC,
+    Hispanic = P_HISP,
+    White = P_WHITE,
+    Black = P_BLACK,
+    Two_plus = P_TR
+  ) %>%
+  mutate(
+    school = str_to_title(school),
+    Other = Indian + Pacific + Two_plus
+  ) %>%
+  select(-Indian, -Pacific, -Two_plus) %>%
+  mutate_at(.vars = vars(Asian:Other), ~round(., 1))
+
+private_demo_shp <- private_shp %>%
+  left_join(private_demo_summary, by = c("SchoolName" = "school")) %>%
+  filter(!is.na(Asian))
+
+# combine private and public shapes
+public_private_demo_shp <- rbind(
+  public_demo_shp %>% select(school, Type, Asian:White), 
+  private_demo_shp %>% select(school = SchoolName, Type, Asian:Black, Other)
+)
+latlong <- st_coordinates(public_private_demo_shp) %>%
+  as.data.frame()
+public_private_demo_shp$long <- latlong$X
+public_private_demo_shp$lat <- latlong$Y
+```
+
+```{r}
+# small function to get center coordinate of a shapefile
+get_center <- function(layer){
+  bbox <- st_bbox(layer)
+  result <- list()
+  result$long <- unname((bbox$xmax - bbox$xmin) / 2 + bbox$xmin)
+  result$lat <- unname((bbox$ymax - bbox$ymin) / 2 + bbox$ymin)
+  return(result)
+}
+```
+
+```{r}
+colors <- brewer.pal(5, "Set1")
+center <- get_center(public_demo_shp)
+
+leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
+  addTiles(
+    urlTemplate = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  ) %>%
+  setView(center$long - 0.05, center$lat, zoom = 11) %>%
+  addMinicharts(
+    public_private_demo_shp$long, public_private_demo_shp$lat,
+    type = "pie",
+    chartdata = public_private_demo_shp %>%
+      as.data.frame() %>%
+      select(Asian:White),
+    popup = popupArgs(
+      supValues = public_private_demo_shp %>%
+        as.data.frame() %>%
+        select(Type)
+    ),
+    colorPalette = colors,
+    width = 20,
+    layerId = public_private_demo_shp$school
+  ) %>%
+  addCircleMarkers(
+    data = public_private_demo_shp,
+    label = public_private_demo_shp$school,
+    labelOptions = labelOptions(
+      noHide = T,
+      textOnly = TRUE,
+      textsize = "5px",
+      direction = "top",
+      maxZoom = 10
+    ),
+    radius = 1,
+    stroke = FALSE,
+    fillOpacity = 0,
+    group = "labels"
+  ) %>%
+  addLayersControl(
+    overlayGroups = c("labels"),
+    options = layersControlOptions(collapsed = FALSE, position = "topleft")
+  )
+```
+
+Luckily, state scores are available for different demographics (race, gifted,
+etc.). This facilitates making fair comparisons.
+
+## Local schools
+
+This criteria is mainly personal preference, but I wanted my son's school to be
+near our home. This makes it a lot easier for me to attend functions, but also
+makes the every day pickup and drop off routine easier. If he takes the bus to
+school when he's older, he won't spend as much time on it as I did when I was a
+kid. I hated the bus.
+
+With my new understanding of EOGs, EVAAS and ITBS, I decided to compare some
+local schools of various flavors.
+
+  * Penny Road (public - our traditional calendar option)
+  * Oak Grove (public - our year round option)
+  * Peak Charter (public - charter)
+  * Thales Academy (private)
+  * Resurrection Lutheran (private)
+
+First, it seemed like a good idea to see where the public schools fell on the
+scatter chart from above.
+
+```{r}
+local_public_schools <- c(
+    "Peak Charter Academy",
+    "Oak Grove Elementary",
+    "Penny Road Elementary"
+  )
+
+local_tbl <- chart_tbl %>%
+  filter(school %in% local_public_schools)
+
+p %>%  
+  add_annotations(
+    data = local_tbl, x = ~pct_4, y = ~growth_index, text = ~school,
+    ax = -10, ay = -20
+  )
+```
+
+Sticking with my decision above to favor EOG scores over EVAAS, Penny Road
+appears to do slightly better than Oak Grove, but the charter school scores
+better than either (and on both metrics).
+
+The chart below shows the EOG scores by school and race. Black and hispanic
+students get the best scores at Peak while white students score higher at Penny
+Road.
+
+```{r}
+chart_eog <- eog_tbl_filtered %>%
+  filter(
+    grade == "All Subjects"
+  )
+chart_growth <- growth_tbl %>%
+  filter(growth_type == "Overall")
+chart_tbl <- chart_eog %>%
+  left_join(
+    chart_growth %>%
+      select(district, school, subgroup, growth_status, growth_index),
+    by = c("district", "school", "subgroup")
+  ) %>%
+  filter(!is.na(growth_status))
+
+race_chart <- chart_tbl %>%
+  filter(
+    subgroup %in% c("White", "Black", "Hispanic"),
+    school %in% local_public_schools
+  ) %>% mutate(
+    # x_label = map(function(x) word(x)[1], school)
+    x_label = map_chr(school, function(x) word(x)[1])
+  )
+
+ggplot(data = race_chart) +
+  # geom_point(aes(x = pct_4, y = growth_index, color = subgroup)) +
+  geom_bar(aes(x = x_label, y = pct_4, fill = subgroup), stat = "identity") +
+  # geom_text(
+  #   aes(x = pct_4, y = growth_index, label = school),
+  #   check_overlap = TRUE, size = 3, nudge_y = .2
+  # ) +
+  facet_wrap(vars(subgroup)) +
+  ggtitle("EOG Scores by Race") +
+  xlab("School") + 
+  ylab("EOG CCR") +
+  guides(fill = FALSE)
+```
+
+## Reproducibility and Data
+
+
+
+## Other Resources
+
+I encountered many great resources that helped inform my investigation. Every
+public school (non-charter) in Wake County has a School Improvement Plan (SIP) that
+you can view online. This is a candid, introspective look by the school at what
+they need to do to improve. Each link below provides the login information to
+view that school's SIP on a system called Indistar.
+
+Oak Grove:
+https://www.wcpss.net/Domain/6942
+
+Penny Road:
+https://www.wcpss.net/Domain/7040
+
+Another great resource is https://www.greatschools.org/. You can get detailed
+information for each school along with reviews. For example: https://www.greatschools.org/north-carolina/cary/1975-Penny-Road-Elementary/.
+

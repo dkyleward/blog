@@ -1,0 +1,25 @@
+
+0 header
+"Official School Name -------------------",C,1,62,0,62,0
+"School Code",C,2,5,0,5,0
+"School Mailing Address ----------",C,3,54,0,54,0
+"School Mailing City",C,4,22,0,22,0
+"School Mailing State",C,5,4,0,4,0
+"School Mailing ZIP",C,6,12,0,12,0
+"School Physical Address ------------",C,7,74,0,74,0
+"School Physica Address City",C,8,16,0,16,0
+"School Physical Address State",C,9,4,0,4,0
+"School Physical Address Zip",C,10,12,0,12,0
+"County Description",C,11,14,0,14,0
+"School Effective Date",C,12,12,0,12,0
+"School Office Phone",C,13,14,0,14,0
+"School Office Fax",C,14,14,0,14,0
+"URL School Address",C,15,75,0,75,0
+"Charter Director --------------",C,16,33,0,33,0
+"Charter Director Email",C,17,43,0,43,0
+"Board Chair ---------------",C,18,29,0,29,0
+"Board Chair Email",C,19,47,0,47,0
+"Grade Level Current",C,20,44,0,44,0
+"Grade Level Approved",C,21,44,0,44,0
+"Last School Record Add Or Chg Date",C,22,12,0,12,0
+"Last Staff Record Add Or Chg Date",C,23,12,0,12,0

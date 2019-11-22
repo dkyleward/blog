@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?><metadata>
+    <idinfo>
+        <citation>
+            <citeinfo>
+                <origin/>
+                <pubdate>20170331</pubdate>
+                <title>Non-Public Schools, March 2017</title>
+                <geoform>vector digital data</geoform>
+                <pubinfo>
+                    <pubplace/>
+                    <publish>NC Dept. of Administration, Division of Non-Public Education</publish>
+                </pubinfo>
+                <othercit>NCCGIA distributes this dataset</othercit>
+                <onlink>http://data.nconemap.com</onlink>
+            </citeinfo>
+        </citation>
+        <descript>
+            <abstract>DOA/NC State Property Office developed the digital Non-Public Schools data from addresses provided by the NC Department of Administration, Division of Non-Public Education on 6/15/15. NC Center for Geographic Information and Analysis developed the original digital Non-Public Schools data from addresses provided by the NC Department of Administration, Division of Non-Public Education on 5/07/03. This file enables users to identify non-public school locations. This data covers the entire extent of North Carolina.</abstract>
+            <purpose>This data was created to assist governmental agencies and others in making resource management decisions through use of a Geographic Information System (GIS).</purpose>
+            <supplinf>Revisions and updates to this layer include: 7)Regular update. March 2017. 6)Regular update. June 2015. from MS Excel workbook DOA/Division of Non-Public Education 5)Regular update. April 2013. from MS Excel workbook DOA/Division of Non-Public Education 4)Regular update. December 28, 2007. Website: http://www.ncdnpe.org/hhh119i.pdf. 3)Regular update. December 15, 2006. Website: http://www.ncdnpe.org/hhh119h.htm. 2)The 06/18/04 update: Previous data was compared to schools posted in Adobe Acrobat Reader files on the following website: http://www.doa.state.nc.us/dnpe/hhh118f.htm. Schools were added or deleted as necessary, and other pertinent data (administrator, phone number, grades, enrollment, staff, etc) updated as needed. 1)The 05/21/03 version was the first version of this data.</supplinf>
+        </descript>
+        <timeperd>
+            <timeinfo>
+                <rngdates>
+                    <begdate>20030507</begdate>
+                    <enddate>20170331</enddate>
+                </rngdates>
+            </timeinfo>
+            <current>Data creation and revision dates</current>
+        </timeperd>
+        <status>
+            <progress>Complete</progress>
+            <update>As needed</update>
+        </status>
+        <spdom>
+            <bounding>
+                <westbc>-84.142597</westbc>
+                <eastbc>-75.599778</eastbc>
+                <northbc>36.534618</northbc>
+                <southbc>33.806677</southbc>
+            </bounding>
+        </spdom>
+        <keywords>
+            <theme>
+                <themekt>None</themekt>
+                <themekey>Schools</themekey>
+                <themekey>Education</themekey>
+                <themekey>Private</themekey>
+                <themekey>Non-Public</themekey>
+            </theme>
+            <theme>
+                <themekt>ISO 19115 Topic Category</themekt>
+                <themekey>structure</themekey>
+            </theme>
+            <place>
+                <placekt>William S. Powell, The North Carolina GAZETTEER, A Dictionary of Tar Heel Places, (Chapel Hill: University of North Carolina Press), August 1984.</placekt>
+                <placekey>North Carolina</placekey>
+            </place>
+        </keywords>
+        <accconst>None</accconst>
+        <useconst>Acknowledgement of products derived from this data set should cite the following: The source of the Non-Public Schools data is NC OneMap. Earlier versions of this data set may exist. The user must be sure to use the appropriate data set for the time period of interest. While efforts have been made to ensure that these data are accurate and reliable within the state of the art, CGIA cannot assume liability for any damages or misrepresentation caused by any inaccuracies in the data or as a result of changes to the data caused by system transfers.</useconst>
+        <ptcontac>
+            <cntinfo>
+                <cntorgp>
+                    <cntorg>NC Department of Administration, Division of Non-Public Education</cntorg>
+                    <cntper>Pam Finnell</cntper>
+                </cntorgp>
+                <cntaddr>
+                    <addrtype>mailing</addrtype>
+                    <address>1309 Mail Service Center</address>
+                    <city>Raleigh</city>
+                    <state>NC</state>
+                    <postal>27699</postal>
+                    <country>US</country>
+                </cntaddr>
+                <cntvoice>919-733-4276</cntvoice>
+                <cntemail>pamala.finnell@ncmail.net</cntemail>
+                <hours>8:00 am to 5:00 pm</hours>
+                <cntinst>Preferred contact is by email or telephone</cntinst>
+            </cntinfo>
+        </ptcontac>
+    </idinfo>
+    <dataqual>
+        <attracc>
+            <attraccr>Point locations were generated using geocoding in ArcMap 10.3 from the non-public schools address list provided by the Division of Non-Public Education. Points that could not be generated using geocoding were interactively added in arcedit using maps.google.com and/or the directions to each school posted on the Division of Non-Public Education website. This digital file is updated as changes occur.</attraccr>
+        </attracc>
+        <logic>Using ESRI's ARC/INFO GIS software, the dataset was built for point topology using the "build" command. Topology has not been edited since the last build or clean.</logic>
+        <complete>These data represent the locations of Non-Public Schools in North Carolina as listed by the NC Department of Administration, Division of Non-Public Education. The locations were either address-matched using ArcView geocoding or matched manually using http://maps.google.com.</complete>
+        <posacc>
+            <horizpa>
+                <horizpar>The majority of Non-Public Schools were generated using geocoding in ArcMap 10.3. The point generated in the processing would be snapped to the road identified in the address field. Therefore, point locations are coincident with the GDT roads data.</horizpar>
+            </horizpa>
+        </posacc>
+        <lineage>
+            <srcinfo>
+                <srccite>
+                    <citeinfo>
+                        <pubdate>20170331</pubdate>
+                        <title>Non-Public Schools</title>
+                    </citeinfo>
+                </srccite>
+                <typesrc>hardcopyPaper</typesrc>
+                <srctime>
+                    <timeinfo>
+                        <rngdates>
+                            <begdate>20030310</begdate>
+                            <enddate>20170331</enddate>
+                        </rngdates>
+                    </timeinfo>
+                    <srccurr>Original release date and revision date, respectively</srccurr>
+                </srctime>
+                <srccitea>Non-Public Schools</srccitea>
+                <srccontr>Non-Public Schools</srccontr>
+            </srcinfo>
+            <procstep>
+                <procdesc>Point locations were generated using geocoding in ArcMap 10.3 from the non-public schools address list provided by the NC Department of Administration, Division of Non-Public Education on 6/19/15. Points that could not be generated using geocoding were interactively added in ArcMap using http://maps.google.com. This digital file is updated as changes occur.</procdesc>
+                <procdate>20150619</procdate>
+                <proccont>
+                    <cntinfo>
+                        <cntorgp>
+                            <cntorg>NC Center for Geographic Information and Analysis</cntorg>
+                            <cntper>Jeffrey Brown</cntper>
+                        </cntorgp>
+                        <cntpos>Coordination Program Manager</cntpos>
+                        <cntaddr>
+                            <addrtype>physical</addrtype>
+                            <address>301 N. Wilmington St.</address>
+                            <city>Raleigh</city>
+                            <state>North Carolina</state>
+                            <postal>27601</postal>
+                            <country>US</country>
+                        </cntaddr>
+                        <cntvoice>919-754-6580</cntvoice>
+                        <cntfax>919-715-8551</cntfax>
+                        <cntemail>dataq@its.nc.gov</cntemail>
+                        <hours>8am to 5pm</hours>
+                        <cntinst>Phone and electronic mail preferred</cntinst>
+                    </cntinfo>
+                </proccont>
+            </procstep>
+        </lineage>
+    </dataqual>
+    <spdoinfo>
+        <indspref>Method: None</indspref>
+        <direct>Vector</direct>
+        <ptvctinf>
+            <sdtsterm>
+                <sdtstype>Entity point</sdtstype>
+                <ptvctcnt>993</ptvctcnt>
+            </sdtsterm>
+        </ptvctinf>
+    </spdoinfo>
+    <eainfo>
+        <detailed>
+            <enttyp>
+                <enttypl>Non-Public Schools</enttypl>
+                <enttypd>Point locations of Non-Public Schools in North Carolina</enttypd>
+                <enttypds>NC Department of Administration, Division of Non-Public Education</enttypds>
+            </enttyp>
+            <attr>
+                <attrlabl>FID</attrlabl>
+                <attrdef>Point internal identification number</attrdef>
+                <attrdefs>Software computed</attrdefs>
+                <attrdomv>
+                    					
+                    <rdom>
+                        						
+                        <rdommin>0</rdommin>
+                        						
+                        <rdommax>992</rdommax>
+                        					
+                    </rdom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>ObjectID</attrlabl>
+                <attrdef>Point internal identification number</attrdef>
+                <attrdefs>Software computed</attrdefs>
+                <attrdomv>
+                    					
+                    <rdom>
+                        						
+                        <rdommin>1</rdommin>
+                        						
+                        <rdommax>993</rdommax>
+                        					
+                    </rdom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>SchoolID</attrlabl>
+                <attrdef>School identification number</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>County</attrlabl>
+                <attrdef>County name</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>As needed</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>SchoolName</attrlabl>
+                <attrdef>School name</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>As needed</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>Address</attrlabl>
+                <attrdef>Mailing address (PO Box or street number/name)</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>As needed</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>City</attrlabl>
+                <attrdef>Mailing address (city)</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>State</attrlabl>
+                <attrdef>State</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>Zip</attrlabl>
+                <attrdef>Zip code</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>SchoolType</attrlabl>
+                <attrdef>Type of School (Independent or Religious)</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+            <attr>
+                <attrlabl>Website</attrlabl>
+                <attrdef>URL for school website</attrdef>
+                <attrdefs>NC Department of Administration, Division of Non-Public Education</attrdefs>
+                <attrdomv>
+                    					
+                    <udom>Varies</udom>
+                    				
+                </attrdomv>
+                <attrmfrq>None planned</attrmfrq>
+            </attr>
+        </detailed>
+        <overview>
+            <eaover>A dataset coverage depicting non-public school locations.</eaover>
+            <eadetcit>None</eadetcit>
+        </overview>
+    </eainfo>
+    <distinfo>
+        <distrib>
+            <cntinfo>
+                <cntorgp>
+                    <cntorg>NC Center for Geographic Information and Analysis</cntorg>
+                </cntorgp>
+                <cntpos>Database Administration</cntpos>
+                <cntaddr>
+                    <addrtype>physical</addrtype>
+                    <address>301 N. Wilmington St.</address>
+                    <city>Raleigh</city>
+                    <state>North Carolina</state>
+                    <postal>27601</postal>
+                    <country>US</country>
+                </cntaddr>
+                <cntvoice>919-754-6580</cntvoice>
+                <cntfax>919-715-8551</cntfax>
+                <cntemail>nconemap@its.nc.gov</cntemail>
+                <hours>8:30AM - 5:30PM</hours>
+                <cntinst>Phone and electronic mail preferred</cntinst>
+            </cntinfo>
+        </distrib>
+        <distliab>NCCGIA is charged with the development and maintenance of NC OneMap and, in cooperation with other mapping organizations, is committed to offering its users accurate, useful, and current information. Although every effort has been made to ensure the accuracy of information, errors and conditions originating from physical sources used to develop this dataset may be reflected in the data supplied. The user must be aware of possible conditions and bear responsibility for the appropriate use of the information with respect to possible errors, original map scale, collection methodology, currency of data, and other conditions specific to certain data. NCCGIA does not support secondary distribution of this dataset without its current, compliant metadata record. The use of trade names or commercial products does not constitute their endorsement by NCCGIA or North Carolina State Government.</distliab>
+        <stdorder>
+            <digform>
+                <digtinfo>
+                    <formname>ESRI shapefile (*.shp)</formname>
+                </digtinfo>
+                <digtopt>
+                    <onlinopt>
+                        <computer>
+                            <networka>
+                                <networkr>http://data.nconemap.gov/downloads/vector/schlnp.zip</networkr>
+                            </networka>
+                        </computer>
+                    </onlinopt>
+                </digtopt>
+            </digform>
+            <fees>None. Download from www.nconemap.com is free of charge.</fees>
+        </stdorder>
+    </distinfo>
+    <metainfo>
+        <metd>20170424</metd>
+        <metc>
+            <cntinfo>
+                <cntorgp>
+                    <cntorg>North Carolina Center for Geographic Information and Analysis</cntorg>
+                    <cntper>Database Adminstrator</cntper>
+                </cntorgp>
+                <cntpos>Database Administration</cntpos>
+                <cntaddr>
+                    <addrtype>mailing</addrtype>
+                    <address>20322 Mail Service Center</address>
+                    <city>Raleigh</city>
+                    <state>North Carolina</state>
+                    <postal>27699</postal>
+                    <country>US</country>
+                </cntaddr>
+                <cntvoice>919-754-6580</cntvoice>
+                <cntfax>919-715-8551</cntfax>
+                <cntemail>nconemap@its.nc.gov</cntemail>
+                <hours>8am to 5pm</hours>
+                <cntinst>Phone and electronic mail preferred</cntinst>
+            </cntinfo>
+        </metc>
+        <metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+        <metstdv>FGDC-STD-001-1998</metstdv>
+        <mettc>local time</mettc>
+        <metuc>This metadata file is to accompany the dataset. NCCGIA does not support secondary distribution of this dataset without its current, compliant metadata record. If the dataset described in this metadata record was received from anyone besides NCCGIA, this metadata and the dataset it describes may contain discrepancies.</metuc>
+    </metainfo>
+</metadata>
