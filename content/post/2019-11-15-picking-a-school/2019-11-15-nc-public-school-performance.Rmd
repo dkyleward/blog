@@ -1,5 +1,5 @@
 ---
-title: NC Public School Performance
+title: Choosing a School in NC
 author: Kyle Ward
 date: '2019-11-15'
 slug: nc-public-school-performance
@@ -30,22 +30,23 @@ library(plotly)
 library(sf)
 library(leaflet)
 library(leaflet.minicharts)
+library(leafsync)
 library(RColorBrewer)
 ```
 
-My oldest is entering kindergarten next year, and I wanted to answer two big
+My oldest is entering Kindergarten next year, and I wanted to answer two big
 questions:
 
   * What are the best public schools he can attend?
   * Are the private options worth the cost?
 
 What follows in this article is my dive into the deep end of school performance
-metrics, and I used them to make, what I hope is, an informed decision.
+metrics and how I used them to make an informed decision (hopefully). Of course,
+the choice of school depends on a lot more than test scores, but they were an
+important part of my decision.
 
-Good primer with general info:
-http://www.ncpublicschools.org/docs/accountability/reporting/2018/documentation/chrtgrdrt18.pdf
-
-
+It is also my hope that this post introduces helpful resources to others making
+the same choice.
 
 ```{r, message=FALSE, warning=FALSE}
 ## Test Scores ##
@@ -56,6 +57,7 @@ growth_csv <- here(
 )
 growth_tbl <- read_csv(growth_csv) %>%
   select(
+    ID = `School Code`,
     board = `State Board Region`,
     district = `District Name`,
     school = `School Name`,
@@ -71,6 +73,7 @@ eog_csv <- here(
 )
 eog_tbl <- read_csv(eog_csv) %>%
   select(
+    ID = `School\nCode`,
     district = `District Name`,
     school = `School Name`,
     subgroup = Subgroup,
@@ -96,7 +99,10 @@ public_file <- here(
 public_shp <- st_read(public_file, quiet = TRUE) %>%
   filter(COUNTY == "Wake") %>%
   st_transform(4326) %>%
-  mutate(Type = "Public")
+  mutate(
+    ID = as.numeric(LEA_SCHOOL),
+    Type = "Public"
+  )
 
 # Charter shapefile
 # I downloaded a list of charter schools and addresses from here:
@@ -111,11 +117,15 @@ charter_shp <- st_read(charter_file, quiet = TRUE) %>%
   st_transform(4326) %>%
   mutate(Type = "Public Charter")
 
-# Combine them into one shapefile
+# Combine them into one shapefile. This will duplicate some schools, but will
+# add in some charters missing from the public file.
 combined_shp <- rbind(
-  public_shp %>% select(school = SCHOOL_NAM, Type), 
-  charter_shp %>% select(school = SCHOOL, Type)
-)
+  public_shp %>% select(ID, school = SCHOOL_NAM, Type), 
+  charter_shp %>% select(ID, school = SCHOOL, Type)
+) %>%
+  group_by(school) %>%
+  mutate(count = seq(1, n())) %>%
+  filter(count == 1)
 latlong <- st_coordinates(combined_shp) %>%
   as.data.frame()
 combined_shp$long <- latlong$X
@@ -158,7 +168,7 @@ by the State, you'll see that they each have two metrics.
     * Represented by the letter grade of the school.
   * A growth score
     * Measured by the Education Value-Added Assessment System (EVAAS)
-    * Represnted by the color of the school
+    * Represented by the color of the school
     
 I was familiar with the EOG tests. I took them as a kid, and it's a pretty
 straight-forward measure to interpret. An "A" means that kids got a lot of
@@ -180,20 +190,19 @@ third grade teachers:
     * At year end, they are still reading at a fourth grade level.
 
 Based on the EOG exam, Teacher B would look better because her children can read at
-a fourth grade level. Looking at student growth should give better insights
-into teacher performance.
+a fourth grade level. Looking at student growth would reveal that Teacher A
+accomplished much more during the school year.
 
 The goal of EVAAS and other [value-added
 modeling](https://en.wikipedia.org/wiki/Value-added_modeling) is to isolate the
-role of the teacher in a student's growth and control for things like the
-student's socio-economic status or previous competency level.
+role of the teacher in a student's growth and control for things like
+socio-economic status or previous competency level.
 
 My first scatter plot of schools compared their EOG and growth scores. Along the
-x-axis is the percent of students that scored above level four on the EOG. Level
-4 is "College and Career Ready" (CCR). The y-axis shows the growth score. Scores
-between -2 and 2 mean that students were learning at the rate that was expected.
-Schools above 2 exceeded this growth while schools below 2 saw students growing
-slower than expected.
+x-axis is the percent of students that scored above level four on the EOG
+(College and Career Ready or CCR). The y-axis shows the growth index where
+scores between -2 and 2 mean that students were learning at the expected rate.
+Schools above 2 exceeded expectations while schools below 2 fell short.
 
 ```{r}
 chart_eog <- eog_tbl_filtered %>%
@@ -249,41 +258,41 @@ p
 ```
 
 There is a relationship between the two test scores (represented by the dashed
-blue line), but the correlation was slight. For the most part, the
-schools with the lowest EOG scores failed to meet their growth targets, and the
-schools with the best EOG scores met or exceeded them. With that said, the schools
-are scattered around widely.
+blue line), but it wasn't as strong as I expected. After digging through several
+locations online, I was unable to get more than a general impression of how the
+EVAAS scores were calculated. I was unable to find a statistical model or
+documentation published by SAS (creators of EVAAS). I reached out to a teacher
+friend of mine and quickly learned that I wasn't the only one. Teachers are in
+the dark like everyone else, and they aren't happy about it.
 
-After digging through several locations online, I was unable to get more than
-a general impression of how the growth targets were forecasted for a student. I
-was unable to find a statistical model published by SAS (creators of EVAAS). I
-reached out to a teacher friend of mine and quickly learned what teachers
-thought of EVAAS. To put it politely: they don't like it. One of the biggest
-reasons behind this was a lack of transparency of how the scores were generated.
-Apparently, I'm not the only one who couldn't figure it out.
+Undocumented statistical models raise several flags. Perhaps there is validation
+work I've not seen demonstrating that the models can be trusted, but I decided
+to put more weight on the EOG scores and use the EVAAS system as a secondary
+point of reference.
 
-Undocumented statistical models raise several flags. Perhaps
-there is validation work I've not seeing demonstrating that the models can be
-trusted, but I decided to put more weight on the EOG scores and use the EVAAS
-system as another point of reference (e.g. to break ties).
-
-### ITBS
+### Data on private schools
 
 One thing I learned quickly was that the EOG and EVAAS scoring didn't apply to
 private schools, which complicated the comparisons. The private schools I
 contacted all used the [Iowa Test of Basic
-Skills](https://en.wikipedia.org/wiki/Iowa_Assessments) (ITBS), which at least
-facilitated comparisons between private schools. I'll use these below.
+Skills](https://en.wikipedia.org/wiki/Iowa_Assessments) (ITBS). Some were more
+forthcoming with their scores than others, but it made a systematic comparison
+among private schools difficult. I also discovered the National Assessment of
+Educational Progress ([NAEP](https://nces.ed.gov/nationsreportcard/)), which is
+administered to both private and public schools in 4<sup>th</sup>,
+8<sup>th</sup> and 12<sup>th</sup> grades. Unfortunately, viewing data by
+school is restricted.
 
-### Digging Deeper
+## School demographics
 
-The scores above are for the school as a whole. The socio-economic mix of schools
-is often a large factor in these overall scores. This means that understanding
-the makeup of schools. As in our example when considering growth scores, an
-excellent school may be in a disadvantaged area and look worse based on EOGs
-alone. The map below shows a breakdown of every public, public charter, and
-private school in Wake County. Click on a pie chart to see the stats as well
-as the school type.
+The test scores above are for the school as a whole. Several studies, including
+one using the NAEP data, suggest that achievement differences between schools
+are due more to demographic differences than anything else
+([link](https://nces.ed.gov/nationsreportcard/pubs/studies/2006461.asp)). This
+means that understanding the makeup of schools is crucial. There are several
+online sources that show the demographics of individual schools
+([example](https://www.greatschools.org/)), but I found it useful to map the
+data to see many at once.
 
 ```{r, message=FALSE, warning=FALSE}
 # Prepare a shapefile of demographic info for public schools
@@ -294,7 +303,11 @@ public_demo_file <- here(
 )
 public_demo_tbl <- read_csv(public_demo_file)
 wake_public_demo_tbl <- public_demo_tbl %>%
-  filter(SCH_NAME %in% chart_tbl$school)
+  filter(SCH_NAME %in% chart_tbl$school) %>%
+  mutate(
+    ID = gsub("NC-", "", ST_SCHID),
+    ID = gsub("-", "", ID)
+  )
 public_demo_summary <- wake_public_demo_tbl %>%
   mutate(
     RACE_ETHNICITY = case_when(
@@ -307,7 +320,7 @@ public_demo_summary <- wake_public_demo_tbl %>%
       TRUE ~ RACE_ETHNICITY
     )
   ) %>%
-  group_by(school = SCH_NAME, race = RACE_ETHNICITY) %>%
+  group_by(ID, school = SCH_NAME, race = RACE_ETHNICITY) %>%
   summarize(students = sum(STUDENT_COUNT, na.rm = TRUE)) %>%
   filter(race != "No Category Codes") %>%
   mutate(percent = round(students / sum(students) * 100, 1)) %>%
@@ -318,15 +331,19 @@ public_lunch_file <- here(
   "static", "data", "2019-11-15-picking-a-school",
   "public_school_demographics", "nces_lunch_program_data_nc.zip"
 )
-public_lunch_tbl <- read_csv(public_lunch_file)
+public_lunch_tbl <- read_csv(public_lunch_file) %>%
+  mutate(
+    ID = gsub("NC-", "", ST_SCHID),
+    ID = gsub("-", "", ID)
+  )
 public_lunch_summary <- wake_public_demo_tbl %>%
   filter(TOTAL_INDICATOR == "Education Unit Total") %>%
-  select(school = SCH_NAME, all_students = STUDENT_COUNT) %>%
+  select(ID, school = SCH_NAME, all_students = STUDENT_COUNT) %>%
   left_join(
     public_lunch_tbl %>%
       filter(LUNCH_PROGRAM == "No Category Codes") %>%
-      select(school = SCH_NAME, lunch_students = STUDENT_COUNT),
-    by = "school"
+      select(ID, lunch_students = STUDENT_COUNT),
+    by = "ID"
   ) %>%
   mutate(
     `Free Lunch` = round(lunch_students / all_students * 100, 1),
@@ -373,7 +390,8 @@ private_demo_summary <- wake_private_demo_tbl %>%
   ) %>%
   mutate(
     school = str_to_title(school),
-    Other = Indian + Pacific + Two_plus
+    Other = Indian + Pacific + Two_plus,
+    school = ifelse(school == "Thales Academy Apex K-5", "Thales Academy of Apex", school)
   ) %>%
   select(-Indian, -Pacific, -Two_plus) %>%
   mutate_at(.vars = vars(Asian:Other), ~round(., 1))
@@ -404,16 +422,23 @@ get_center <- function(layer){
 }
 ```
 
+
+### Race
+
+The map below shows the racial composition of every public, public charter, and
+private school in Wake County. Click on a pie chart to see the stats as well as
+the school type.
+
 ```{r, race map}
 colors <- brewer.pal(5, "Set1")
 center <- get_center(public_demo_shp)
 
-leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
+leaflet(width = "100%", options = leafletOptions(zoomControl = FALSE)) %>%
   addTiles(
     urlTemplate = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
   ) %>%
-  setView(center$long - 0.05, center$lat, zoom = 11) %>%
+  setView(center$long - 0.15, center$lat - 0.02, zoom = 12) %>%
   addMinicharts(
     public_private_demo_shp$long, public_private_demo_shp$lat,
     type = "pie",
@@ -426,7 +451,7 @@ leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
         select(Type)
     ),
     colorPalette = colors,
-    width = 20,
+    width = 25,
     layerId = public_private_demo_shp$school
   ) %>%
   addCircleMarkers(
@@ -435,30 +460,30 @@ leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
     labelOptions = labelOptions(
       noHide = T,
       textOnly = TRUE,
-      textsize = "5px",
-      direction = "top",
-      maxZoom = 10
+      textsize = "8px",
+      direction = "top"
     ),
     radius = 1,
     stroke = FALSE,
     fillOpacity = 0,
     group = "labels"
-  ) %>%
-  addLayersControl(
-    overlayGroups = c("labels"),
-    options = layersControlOptions(collapsed = FALSE, position = "topleft")
   )
 ```
+
+### Free Lunch
+
+The second map shows the proportion of students qualifying for free lunch. Note
+that private schools are not included in this map.
 
 ```{r, lunch map}
 colors <- brewer.pal(3, "Set2")
 
-leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
+leaflet(width = "100%", options = leafletOptions(zoomControl = FALSE)) %>%
   addTiles(
     urlTemplate = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
   ) %>%
-  setView(center$long - 0.05, center$lat, zoom = 11) %>%
+  setView(center$long - 0.15, center$lat - 0.02, zoom = 12) %>%
   addMinicharts(
     public_demo_shp$long, public_demo_shp$lat,
     type = "pie",
@@ -471,7 +496,7 @@ leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
         select(Type)
     ),
     colorPalette = colors,
-    width = 20,
+    width = 25,
     layerId = public_demo_shp$school
   ) %>%
   addCircleMarkers(
@@ -480,35 +505,27 @@ leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
     labelOptions = labelOptions(
       noHide = T,
       textOnly = TRUE,
-      textsize = "5px",
-      direction = "top",
-      maxZoom = 10
+      textsize = "8px",
+      direction = "top"
     ),
     radius = 1,
     stroke = FALSE,
     fillOpacity = 0,
     group = "labels"
-  ) %>%
-  addLayersControl(
-    overlayGroups = c("labels"),
-    options = layersControlOptions(collapsed = FALSE, position = "topleft")
   )
 ```
 
+The schools were indeed very different, and that had to be taken into account
+to make a fair comparison.
 
-Luckily, state scores are available for different demographics (race, gifted,
-etc.). This facilitates making fair comparisons.
+## Breaking down test scores
 
-## Local schools
+Before breaking down test scores further, I first narrowed the list of schools
+to those near my home. While we could attend any charter or private school,
+proximity makes the daily routine much more convenient and allows me to be more
+active in the school.
 
-This criteria is mainly personal preference, but I wanted my son's school to be
-near our home. This makes it a lot easier for me to attend functions, but also
-makes the every day pickup and drop off routine easier. If he takes the bus to
-school when he's older, he won't spend as much time on it as I did when I was a
-kid. I hated the bus.
-
-With my new understanding of EOGs, EVAAS and ITBS, I decided to compare some
-local schools of various flavors.
+These are the schools I investigated further:
 
   * Penny Road (public - our traditional calendar option)
   * Oak Grove (public - our year round option)
@@ -516,8 +533,10 @@ local schools of various flavors.
   * Thales Academy (private)
   * Resurrection Lutheran (private)
 
+### Public options
+
 First, it seemed like a good idea to see where the public schools fell on the
-scatter chart from above.
+scatter chart from earlier.
 
 ```{r}
 local_public_schools <- c(
@@ -536,14 +555,18 @@ p %>%
   )
 ```
 
-Sticking with my decision above to favor EOG scores over EVAAS, Penny Road
-appears to do slightly better than Oak Grove, but the charter school scores
-better than either (and on both metrics).
+Peak Charter outperformed Penny Road and Oak Grove in both EOG and EVAAS scores.
+Based on this plot (and my preference for EOG over EVAAS), my initial rankings
+were:
+
+  1. Peak Charter
+  2. Penny Road
+  3. Oak Grove
 
 The chart below shows the EOG scores by school and subgroup. In short, every
-subgroup scores better at Peak Charter except for white students. Compared to
-the difference in other subgroups, the difference in the white subgroup is small
-and white students perform well in all three schools.
+subgroup scored better at Peak Charter except for white students. Further, the
+difference in white students is small compared to how well they perform at all
+three schools.
 
 ```{r}
 chart_eog <- eog_tbl_filtered %>%
@@ -577,8 +600,9 @@ subgroup_chart <- chart_tbl %>%
     x_label = map_chr(school, function(x) word(x)[1])
   )
 
-ggplot(data = subgroup_chart) +
-  geom_bar(aes(x = x_label, y = pct_4, fill = subgroup), stat = "identity") +
+ggplot(data = subgroup_chart, aes(x = x_label, y = pct_4, fill = subgroup, label = pct_4)) +
+  geom_bar(stat = "identity") +
+  geom_text(nudge_y = -3, size = 3) +
   facet_wrap(vars(subgroup), nrow = 2) +
   ggtitle("EOG Scores by Subgroup") +
   xlab("School") + 
@@ -586,24 +610,100 @@ ggplot(data = subgroup_chart) +
   guides(fill = FALSE)
 ```
 
+The second chart shows the EVAAS growth index broken down in the same manor.
+While I decided to put less emphasis on it, it was worth a review, and Peak
+was the clear winner here, too.
+
+```{r}
+ggplot(data = subgroup_chart, aes(x = x_label, y = growth_index, fill = subgroup, label = growth_index)) +
+  geom_bar(stat = "identity") +
+  geom_text(nudge_y = ifelse(subgroup_chart$growth_index > 0, .5, -.5), size = 3) +
+  facet_wrap(vars(subgroup), nrow = 2) +
+  ggtitle("Growth Scores by Subgroup") +
+  xlab("School") + 
+  ylab("EVAAS Growth Index") +
+  guides(fill = FALSE)
+```
+
+
+### Private options
+
+Thales provided their ITBS scores. Kindergartners scored better than 94% of the
+students nationwide while fifth graders scored better than 82%. The decline was
+concerning, but there are many potential explanations (e.g. new students
+joining Thales in fifth grade).
+
+Resurrection Lutheran did not provide detailed scores, but they did provide a
+copy of their letter to parents from last year. Their students also did well,
+with most classes scoring at 90% or above.
+
+## Comparing public and private
+
+The easy decision was to select Peak Charter Academy as our preferred public
+school option. Of course, admission to Peak is done by lottery, so it isn't
+guaranteed.
+
+The hard part was to judge if the private schools were worth the money. It is
+impossible to compare private to public directly given the different tests
+used.
+
+By researching the history of testing in NC, I realized the ITBS was used by
+North Carolina until the 2001-2002 school year. Private schools are still
+required to do yearly testing using national tests like ITBS.
+
+> The Iowa Tests of Basic Skills (ITBS) will be eliminated from the North Carolina
+state testing program beginning in the 2001-02 school year. The basis of this
+decision by the North Carolina State Board of Education was two-fold: (1) to
+allay public concern regarding excessive testing and (2) to accommodate pressing
+budgetary constraints. ([source](http://www.ncpublicschools.org/docs/accountability/reporting/SOS/2001/Report.pdf))
+
+Figure 13 from the same report shows the ITBS scores from 1996-2001.
+
+![](/img/2019-11-15-picking-a-school/historical_nc_itbs_scores.png)
+
+These scores weren't encouraging, but it's important to remember that they are
+statewide scores. Based on my research, I expected the scores from Wake
+County to be higher than the state average. I also expected Penny Road, Peak
+Charter, and Oak Grove to be higher than the average for Wake County, but
+guessing where they would score today was impossible.
+
+The private schools had higher scores, but were skewed toward Asian and White
+students, which are high-performing across the county. It was hard
+to say how much of the ITBS scores were due to simple demographics.
+
+## Conclusion
+
+All in all, none of our schools look like bad options, and we will tour them
+all. As of this moment, my top choice is Peak Charter. If we win the lottery, it
+makes the decision easy. If we don't win, then deciding between Penny Road and
+Resurrection Lutheran will be difficult. It will likely come down to culture,
+personal preferences, and whether or not we can afford tuition.
+
 ## Reproducibility and Data
 
+All the data and code used to perform this analysis is available on GitHub:
 
+[Data](https://github.com/dkyleward/blog/tree/master/static/data/2019-11-15-picking-a-school)  
+[Code](https://github.com/dkyleward/blog/blob/master/content/post/2019-11-15-picking-a-school/2019-11-15-nc-public-school-performance.Rmd) 
 
-## Other Resources
+## Summary of Resources
 
-I encountered many great resources that helped inform my investigation. Every
-public school (non-charter) in Wake County has a School Improvement Plan (SIP) that
-you can view online. This is a candid, introspective look by the school at what
-they need to do to improve. Each link below provides the login information to
-view that school's SIP on a system called Indistar.
+I encountered many great resources during my investigation. 
 
-Oak Grove:
-https://www.wcpss.net/Domain/6942
+[Test Scores](http://www.ncpublicschools.org/accountability/reporting/)  
+[School GIS points](https://data-nconemap.opendata.arcgis.com/datasets/public-schools)  
+[Private Demographics](https://nces.ed.gov/surveys/pss/pssdata.asp)  
+[Public Demographics](https://nces.ed.gov/ccd/pubschuniv.asp)
 
-Penny Road:
-https://www.wcpss.net/Domain/7040
+Every public school (non-charter) in Wake County has a School Improvement Plan
+(SIP) that you can view online. This is a candid, introspective look by the
+school at what they need to do to improve. The links below provide the login
+information to view that school's SIP on a system called Indistar.
+
+[Oak Grove](https://www.wcpss.net/Domain/6942)  
+[Penny Road](https://www.wcpss.net/Domain/7040)
 
 Another great resource is https://www.greatschools.org/. You can get detailed
-information for each school along with reviews. For example: https://www.greatschools.org/north-carolina/cary/1975-Penny-Road-Elementary/.
+information for each school along with reviews. For example: [Penny
+Road](https://www.greatschools.org/north-carolina/cary/1975-Penny-Road-Elementary/).
 

@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>R: Synchronize multiple maps</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body>
+
+<table width="100%" summary="page for syncWith {leaflet.minicharts}"><tr><td>syncWith {leaflet.minicharts}</td><td style="text-align: right;">R Documentation</td></tr></table>
+
+<h2>Synchronize multiple maps</h2>
+
+<h3>Description</h3>
+
+<p>This function can be used when multiple leaflet maps are displayed on the
+same view (for instance in a shiny application or a Rmarkdown document) and
+one wants to synchronize their center, zoom and time.
+</p>
+<p><code>syncWith()</code> can also be used with basic leaflet maps to synchronize
+only their zoom and center.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+syncWith(map, groupname)
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>map</code></td>
+<td>
+<p>A leaflet map object created with <code><a href="../../leaflet/html/leaflet.html">leaflet</a></code>.</p>
+</td></tr>
+<tr valign="top"><td><code>groupname</code></td>
+<td>
+<p>Character string. All maps that use the same group name will
+be synchronized.</p>
+</td></tr>
+</table>
+
+
+<h3>Value</h3>
+
+<p>The modified leaflet map object.
+</p>
+
+
+<h3>Examples</h3>
+
+<pre>
+if (require(manipulateWidget) &amp; require(leaflet)) {
+
+  # Synchronize zoom and center of basic maps.
+  basicMap1 &lt;- leaflet() %&gt;% addTiles() %&gt;% syncWith("basicmaps")
+  basicMap2 &lt;- leaflet() %&gt;% addTiles() %&gt;% syncWith("basicmaps")
+  combineWidgets(basicMap1, basicMap2)
+
+  # Synchronize time step of two maps that represent the evolution of some
+  # variable.
+  map1 &lt;- leaflet() %&gt;% addTiles() %&gt;%
+    addMinicharts(0, 40, chartdata = 1:10, time = 1:10) %&gt;%
+    syncWith("maps")
+  map2 &lt;- leaflet() %&gt;% addTiles() %&gt;%
+    addMinicharts(0, 40, chartdata = 10:1, time = 1:10) %&gt;%
+    syncWith("maps")
+  combineWidgets(map1, map2)
+
+}
+
+</pre>
+
+<hr /><div style="text-align: center;">[Package <em>leaflet.minicharts</em> version 0.5.4 <a href="00Index.html">Index</a>]</div>
+</body></html>
