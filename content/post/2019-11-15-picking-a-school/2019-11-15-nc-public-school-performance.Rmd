@@ -641,7 +641,7 @@ subgroup_chart <- chart_tbl %>%
 
 ggplot(data = subgroup_chart, aes(x = x_label, y = pct_4, fill = subgroup, label = pct_4)) +
   geom_bar(stat = "identity") +
-  geom_text(nudge_y = -3, size = 3) +
+  geom_text(nudge_y = -3, size = 4, color = "white") +
   facet_wrap(vars(subgroup), nrow = 2) +
   ggtitle("EOG Scores by Subgroup") +
   xlab("School") + 
@@ -656,7 +656,7 @@ clear winner here, too.
 ```{r}
 ggplot(data = subgroup_chart, aes(x = x_label, y = growth_index, fill = subgroup, label = growth_index)) +
   geom_bar(stat = "identity") +
-  geom_text(nudge_y = ifelse(subgroup_chart$growth_index > 0, .5, -.5), size = 3) +
+  geom_text(nudge_y = ifelse(subgroup_chart$growth_index > 0, .5, -.5), size = 4) +
   facet_wrap(vars(subgroup), nrow = 2) +
   ggtitle("Growth Scores by Subgroup") +
   xlab("School") + 
