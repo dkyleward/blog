@@ -251,7 +251,9 @@ temp_df <- tibble(
 p <- plot_ly() %>%
   add_trace(
     data = chart_tbl, x = ~pct_4, y = ~growth_index, type = "scatter",
-    mode = "markers", text = ~school, color = ~growth_status
+    mode = "markers", color = ~growth_status,
+    text = ~paste(school, "<br>EOG %: ", pct_4, "<br>Growth: ", growth_index),
+    hoverinfo = "text"
   ) %>%
   add_trace(
     data = temp_df, x = ~x, y = ~y, type = "scatter", mode = "lines",
