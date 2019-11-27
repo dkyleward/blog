@@ -2,7 +2,7 @@
 title: Choosing a School in Wake County
 author: Kyle Ward
 date: '2019-11-15'
-slug: nc-public-school-performance
+slug: choosing-school-wake-county
 categories:
   - Education
 tags:
@@ -10,14 +10,14 @@ tags:
 subtitle: ''
 summary: ''
 authors: []
-lastmod: '2019-11-25T18:52:45-05:00'
+lastmod: '2019-11-26T20:52:45-05:00'
 featured: no
 image:
   caption: ''
   focal_point: ''
   preview_only: no
 projects: []
-draft: true
+draft: false
 editor_options: 
   chunk_output_type: console
 ---
@@ -201,7 +201,7 @@ two third-grade teachers:
     * At year-end, they are still reading at a fourth-grade level.
 
 Based on the EOG exam, Teacher B looks better because her children can read at a
-fourth-grade level. Looking at student growth reveals that Teacher A is doing a
+higher level. Looking at student growth reveals that Teacher A is doing a
 better job.
 
 The goal of EVAAS and other [value-added
@@ -298,9 +298,9 @@ schools, which complicates comparisons. Private schools are required to do
 yearly testing, and the private schools I contacted all use the [Iowa Test of
 Basic Skills](https://en.wikipedia.org/wiki/Iowa_Assessments) (ITBS).
 Unfortunately, I could not find a public database of scores, and instead
-requested them directly from select schools. I also discovered the National
-Assessment of Educational Progress
-([NAEP](https://nces.ed.gov/nationsreportcard/)), which is administered to both
+requested them directly from select schools. I also discovered the [National
+Assessment of Educational Progress]((https://nces.ed.gov/nationsreportcard/))
+(NAEP), which is administered to both
 private and public schools in fourth, eighth and twelfth grades, but viewing
 data by school requires a license.
 
@@ -600,7 +600,7 @@ of public options was:
   3. Oak Grove
 
 From the maps above, I know that Peak Charter has a lower percentage of students
-that qualify for free lunch and a different racial mix. Did this explain the
+that qualify for free lunch and a different racial mix. Does this explain the
 performance difference? The chart below breaks down the EOG scores by school and
 student subgroup. In short, every subgroup (including economically
 disadvantaged) scored better at Peak Charter. The exception was white students,
@@ -664,8 +664,7 @@ ggplot(data = subgroup_chart, aes(x = x_label, y = growth_index, fill = subgroup
   guides(fill = FALSE)
 ```
 
-After looking at scores in detail, my ranking of public options remains the
-same.
+The detailed scores do not change my initial ranking of public options.
 
 ### Private options
 
@@ -712,7 +711,7 @@ today is no simple task.
 The private schools certainly had high ITBS scores in 2018, but their attendance
 is heavily skewed toward Asian and White students. These are the
 highest-performing demographic groups across the county. It is hard to say how
-much of their ITBS scores are due to simple demographics.
+much of the private ITBS scores are due to simple demographics.
 
 ## Conclusion
 
