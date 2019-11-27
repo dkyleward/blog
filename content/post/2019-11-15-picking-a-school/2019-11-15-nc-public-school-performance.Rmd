@@ -4,13 +4,13 @@ author: Kyle Ward
 date: '2019-11-15'
 slug: nc-public-school-performance
 categories:
-  - R
+  - Education
 tags:
-  - R
+  - R, Education
 subtitle: ''
 summary: ''
 authors: []
-lastmod: '2019-11-15T16:52:45-05:00'
+lastmod: '2019-11-25T18:52:45-05:00'
 featured: no
 image:
   caption: ''
@@ -38,12 +38,12 @@ My oldest is entering Kindergarten next year, and I want to answer two big
 questions:
 
   * What are the best public schools he can attend?
-  * Are the private options worth the cost?
+  * Are private options worth the cost?
 
 What follows in this article is my dive into the deep end of school performance
-metrics and how I use them to make what is hopefully an informed decision. Of
-course, the choice of school depends on more than test scores, but they are a
-critical consideration.
+metrics and how I use them to make a (hopefully) informed decision. Of course,
+the choice of school depends on more than test scores, but they are a critical
+consideration.
 
 It is also my hope that this post introduces helpful resources to others going
 through the same process. All of my sources and data are listed at the bottom.
@@ -100,8 +100,8 @@ public_shp <- st_read(public_file, quiet = TRUE) %>%
   filter(COUNTY == "Wake") %>%
   st_transform(4326) %>%
   mutate(
-    ID = as.numeric(LEA_SCHOOL),
-    Type = "Public"
+    ID = LEA_SCHOOL,
+    Type = ifelse(SCH_DESG == "Charter", "Public Charter", "Public")
   )
 
 # Charter shapefile
@@ -115,7 +115,10 @@ charter_file <- here(
 charter_shp <- st_read(charter_file, quiet = TRUE) %>%
   filter(COUNTY == "Wake") %>%
   st_transform(4326) %>%
-  mutate(Type = "Public Charter")
+  mutate(
+    ID = paste0(SCHOOL_COD, "000"),
+    Type = "Public Charter"
+  )
 
 # Combine them into one shapefile. This will duplicate some schools, but will
 # add in some charters missing from the public file.
@@ -123,9 +126,12 @@ combined_shp <- rbind(
   public_shp %>% select(ID, school = SCHOOL_NAM, Type), 
   charter_shp %>% select(ID, school = SCHOOL, Type)
 ) %>%
-  group_by(school) %>%
+  group_by(ID) %>%
   mutate(count = seq(1, n())) %>%
-  filter(count == 1)
+  filter(count == 1) %>%
+  ungroup() %>%
+  select(-count) %>%
+  mutate(school = as.character(school))
 latlong <- st_coordinates(combined_shp) %>%
   as.data.frame()
 combined_shp$long <- latlong$X
@@ -139,9 +145,10 @@ private_file <- here(
 private_shp <- st_read(private_file, quiet = TRUE) %>%
   filter(County == "Wake") %>%
   st_transform(4326) %>%
-  mutate(Type = "Private")
-
-
+  mutate(
+    ID = as.character(SchoolID),
+    Type = "Private"
+  )
 ```
 
 ```{r}
@@ -160,8 +167,10 @@ eog_tbl_filtered <- eog_tbl %>%
 
 ## Two main testing metrics
 
-If you look at the [report cards](https://ncreportcards.ondemand.sas.com/src/?viewSelect=county&year=2018&type=Both&level=All&district=410&lng=en&currpage=1&county=wake) prepared for Wake County schools
-by the State, you'll see that they each have two metrics.
+If you look at the [report
+cards](https://ncreportcards.ondemand.sas.com/src/?viewSelect=county&year=2018&type=Both&level=All&district=410&lng=en&currpage=1&county=wake)
+prepared for Wake County Public  Schools, you'll see that they each have two
+metrics:
 
   * A performance score
     * Measured by End of Grade tests (EOG)
@@ -169,34 +178,38 @@ by the State, you'll see that they each have two metrics.
   * A growth score
     * Measured by the Education Value-Added Assessment System (EVAAS)
     * Represented by the color of the school
+
+![](/img/2019-11-15-picking-a-school/example_report_card.png)
     
 I'm familiar with the EOG tests. I took them as a kid, and the letter grade for
 each school is a pretty straight-forward measure to interpret. An "A" means that
-kids got a lot of questions right and an "F" means they didn't.
+kids got a lot of questions right and a "D" means they didn't.
 
 The growth score is new to me, but given how prominent the color of the school
-is compared to it's letter grade, it seems important.
+is compared to its letter grade, it seems important.
 
 ### Should I consider growth scores?
 
 Student growth appears to be a better measure than just performance. Consider
-two teachers:
+two third-grade teachers:
 
   * Teacher A
-    * Starts off with a class of children reading at a first grade level.
-    * At year end, they are reading at a third grade level.
+    * Starts with a class of children reading at a first-grade level.
+    * At year-end, they are reading at a third-grade level.
   * Teacher B
-    * Starts off with a class of children reading at a fourth grade level.
-    * At year end, they are still reading at a fourth grade level.
+    * Starts with a class of children reading at a fourth-grade level.
+    * At year-end, they are still reading at a fourth-grade level.
 
 Based on the EOG exam, Teacher B looks better because her children can read at a
-fourth grade level. Looking at student growth reveals that Teacher A is actually
-doing a better job.
+fourth-grade level. Looking at student growth reveals that Teacher A is doing a
+better job.
 
 The goal of EVAAS and other [value-added
 modeling](https://en.wikipedia.org/wiki/Value-added_modeling) is to isolate the
 role of the teacher in student learning and control for things like socio-economic
-status or previous competency level.
+status or previous competency level. For a given student, EVAAS makes a growth 
+prediction based on various factors. How the student performs compared to this
+prediction is the growth score.
 
 The scatter plot below compares school EOG and growth scores. It includes all
 schools in Wake County that offer elementary grades. Along the x-axis is the
@@ -215,8 +228,10 @@ chart_growth <- growth_tbl %>%
   filter(subgroup == "All Students", growth_type == "Overall")
 chart_tbl <- chart_eog %>%
   left_join(
-    chart_growth %>% select(district, school, growth_status, growth_index),
-    by = c("district", "school")
+    chart_growth %>% select(ID, growth_status, growth_index),
+    by = c("ID")
+    # chart_growth %>% select(district, school, growth_status, growth_index),
+    # by = c("district", "school")
   ) %>%
   filter(!is.na(growth_status))
 
@@ -251,7 +266,7 @@ p <- plot_ly() %>%
   layout(
     title = "Schools by EOG Level 4 and EVAAS Growth Index",
     yaxis = list(title = "Growth Index"),
-    xaxis = list(title = "EOG CCR"),
+    xaxis = list(title = "EOG % CCR"),
     legend=list(y=0.8, yanchor="top" )
   )
 
@@ -261,43 +276,43 @@ p
 The relationship between the two test scores is represented by the dashed
 blue line, but it isn't very strong (R<sup>2</sup> = .12). It suggests there is
 only a minor relationship between performance and growth, which is
-counter-intuitive to me. It may be right, but warrants further investigation.
+counter-intuitive to me. It may be right but warrants further investigation.
 
-Unfortunately, I was unable to find more than vague references to how the EVAAS
-scores were calculated. I can't find a statistical model or published
+Unfortunately, I am unable to find more than vague references to how the EVAAS
+scores are calculated. I can't find a statistical model or published
 documentation from SAS (creators of EVAAS). I asked a teacher friend of mine and
 quickly learned that I wasn't the only one. Teachers are in the dark like
 everyone else, and they aren't happy about it.
 
-Undocumented statistical models raise several flags. Perhaps there is validation
+I am wary of undocumented statistical models. Perhaps there is validation
 work I've not seen demonstrating that the models can be trusted, but I decided
 to put more weight on the EOG scores and use the EVAAS system as a secondary
 point of reference.
 
 ### Data on private schools
 
-Another thing I learned was that the EOG and EVAAS don't apply to
-private schools, which complicates comparisons. The private schools I contacted
-all use the [Iowa Test of Basic
-Skills](https://en.wikipedia.org/wiki/Iowa_Assessments) (ITBS). Some were more
-forthcoming with their scores than others, and a systematic comparison of
-private schools was difficult. I also discovered the National Assessment of
-Educational Progress ([NAEP](https://nces.ed.gov/nationsreportcard/)), which is
-administered to both private and public schools in fourth, eighth and twelfth
-grades, but viewing data by school requires a license.
+Another thing I learned was that the EOG and EVAAS don't apply to private
+schools, which complicates comparisons. Private schools are required to do
+yearly testing, and the private schools I contacted all use the [Iowa Test of
+Basic Skills](https://en.wikipedia.org/wiki/Iowa_Assessments) (ITBS).
+Unfortunately, I could not find a public database of scores, and instead
+requested them directly from select schools. I also discovered the National
+Assessment of Educational Progress
+([NAEP](https://nces.ed.gov/nationsreportcard/)), which is administered to both
+private and public schools in fourth, eighth and twelfth grades, but viewing
+data by school requires a license.
 
 ## School demographics
 
-The test scores in the scatter plot above are for the schools as a whole.
-Several studies, including one using the NAEP data, suggest that achievement
-differences between schools are due more to demographic differences than
-anything else
-([link](https://nces.ed.gov/nationsreportcard/pubs/studies/2006461.asp)). This
-may justify the weak relationship between EVAAS and EOG scores. It definitely
-means that school composition is critical. There are several online sources that
-show the demographics of individual schools
-([example](https://www.greatschools.org/)), but I found it helpful to map the
-data to see many at once.
+The test scores in the scatter plot above are performance measures for the
+schools in aggregate. Several studies, [including one using the NAEP
+data](https://nces.ed.gov/nationsreportcard/pubs/studies/2006461.asp), suggest
+that achievement differences between schools are due more to demographic
+differences than anything else. This may justify the weak relationship between
+EVAAS and EOG scores. It does mean that school composition is critical.
+Several online sources show the demographics of individual
+schools ([example](https://www.greatschools.org/)), but I found it helpful to
+map the data to see many at once.
 
 ```{r, message=FALSE, warning=FALSE}
 # Prepare a shapefile of demographic info for public schools
@@ -330,6 +345,7 @@ public_demo_summary <- wake_public_demo_tbl %>%
   filter(race != "No Category Codes") %>%
   mutate(percent = round(students / sum(students) * 100, 1)) %>%
   select(-students) %>%
+  ungroup() %>%
   spread(key = race, value = percent)
 
 public_lunch_file <- here(
@@ -354,13 +370,16 @@ public_lunch_summary <- wake_public_demo_tbl %>%
     `Free Lunch` = round(lunch_students / all_students * 100, 1),
     `Paid Lunch` = round(100 - `Free Lunch`, 1)
   ) %>%
-  select(school, `Free Lunch`, `Paid Lunch`)
+  select(ID, `Free Lunch`, `Paid Lunch`)
   
 
 public_demo_shp <- combined_shp %>%
-  left_join(public_demo_summary, by = "school") %>%
+  left_join(
+    public_demo_summary %>% select(-school),
+    by = "ID"
+  ) %>%
   filter(!is.na(Asian)) %>%
-  left_join(public_lunch_summary, by = "school")
+  left_join(public_lunch_summary, by = "ID")
 public_demo_tbl <- public_demo_shp %>%
   as.data.frame() %>%
   select(-geometry)
@@ -393,6 +412,10 @@ private_demo_summary <- wake_private_demo_tbl %>%
     Black = P_BLACK,
     Two_plus = P_TR
   ) %>%
+  group_by(school) %>%
+  mutate(count = seq(1, n())) %>%
+  filter(count == 1) %>%
+  ungroup() %>%
   mutate(
     school = str_to_title(school),
     Other = Indian + Pacific + Two_plus,
@@ -407,8 +430,13 @@ private_demo_shp <- private_shp %>%
 
 # combine private and public shapes
 public_private_demo_shp <- rbind(
-  public_demo_shp %>% select(school, Type, Asian:White), 
-  private_demo_shp %>% select(school = SchoolName, Type, Asian:Black, Other)
+  public_demo_shp %>%
+    select(ID, school, Type, Asian, Black, Hispanic, Other, White), 
+  private_demo_shp %>%
+    select(
+      ID = SchoolID, school = SchoolName, Type, Asian, Black, Hispanic, Other,
+      White
+    )
 )
 latlong <- st_coordinates(public_private_demo_shp) %>%
   as.data.frame()
@@ -430,8 +458,8 @@ get_center <- function(layer){
 
 ### Race
 
-The map below shows the racial composition of every public, public charter, and
-private school in Wake County. Click on a pie chart to see the stats as well as
+The map below shows the racial composition of the public, public charter, and
+private schools in Wake County. Click on a pie chart to see the stats as well as
 the school type.
 
 ```{r, race map}
@@ -523,7 +551,7 @@ leaflet(width = "100%", options = leafletOptions(zoomControl = FALSE)) %>%
 ## Breaking down test scores
 
 The school demographics are very different, which limits the usefulness of
-aggregate school metrics. What is needed is to compare students from similar
+aggregate school metrics. What I need is to compare students from similar
 groups between schools.
 
 Before breaking down test scores further, I narrowed the list of schools to
@@ -534,7 +562,7 @@ active in the school.
 These are the schools I investigated in more detail:
 
   * Penny Road (public - our traditional calendar option)
-  * Oak Grove (public - our year round option)
+  * Oak Grove (public - our year-round option)
   * Peak Charter (public - charter)
   * Thales Academy (private)
   * Resurrection Lutheran (private)
@@ -562,17 +590,20 @@ p %>%
 ```
 
 Peak Charter outperformed Penny Road and Oak Grove in both EOG and EVAAS scores.
-Based on this plot (and my preference for EOG over EVAAS), my initial rankings
-were:
+Based on this plot (and my preference for EOG over EVAAS), my initial ranking
+of public options was:
 
   1. Peak Charter
   2. Penny Road
   3. Oak Grove
 
-The chart below breaks down the EOG scores by school and student subgroup. In
-short, every subgroup scored better at Peak Charter except for white students.
-Further, the difference in white students is small compared to how well they
-perform at all three schools.
+From the maps above, I know that Peak Charter has a lower percentage of students
+that qualify for free lunch and a different racial mix. Did this explain the
+performance difference? The chart below breaks down the EOG scores by school and
+student subgroup. In short, every subgroup (including economically
+disadvantaged) scored better at Peak Charter. The exception was white students,
+but the difference in their performance is small compared to how well they score
+at all three schools.
 
 ```{r}
 chart_eog <- eog_tbl_filtered %>%
@@ -631,30 +662,34 @@ ggplot(data = subgroup_chart, aes(x = x_label, y = growth_index, fill = subgroup
   guides(fill = FALSE)
 ```
 
+After looking at scores in detail, my ranking of public options remains the
+same.
+
 ### Private options
 
-Thales provided their ITBS scores. Kindergartners scored better than 94% of the
-students nationwide while fifth graders scored better than 82%. The decline was
-concerning, but there could be several explanations (e.g. new students
+Thales provided their 2018 ITBS scores. Kindergartners scored better than 94% of
+the students nationwide while fifth-graders scored better than 82%. The decline
+is concerning, but there could be several explanations (e.g. new students
 joining Thales in later grades that are behind).
 
 Resurrection Lutheran did not provide detailed scores, but they did provide a
-copy of their letter to parents from last year. Their students did very well,
+copy of their letter to parents from 2018. Their students did very well,
 with most classes scoring at 90% or above.
 
 ## Comparing public and private
 
-The easy decision is to select Peak Charter Academy as the preferred public
+The easy decision is to select Peak Charter Academy as my preferred public
 option. Of course, admission to Peak is done by lottery, so it isn't
 guaranteed.
 
-It is harder to judge if the private schools are worth the money. It is
-impossible to compare private to public directly given the different tests
-used.
+It is harder to answer the second question: if private schools are worth the
+money. It is impossible to compare private and public directly given the
+different tests used.
 
-While researching the history of testing in NC, I realized the ITBS was used by
-North Carolina until the 2001-2002 school year. While private schools are still
-required to do yearly testing, they stopped for public schools.
+While researching the history of testing in NC, I realized the ITBS was used for
+public schools by North Carolina until the 2001-2002 school year. While private
+schools are still required to do yearly testing, they stopped for public
+schools.
 
 > The Iowa Tests of Basic Skills (ITBS) will be eliminated from the North Carolina
 state testing program beginning in the 2001-02 school year. The basis of this
@@ -667,23 +702,23 @@ Figure 13 from the same report shows the ITBS scores from 1996-2001.
 ![](/img/2019-11-15-picking-a-school/historical_nc_itbs_scores.png)
 
 These scores aren't encouraging, but it's important to remember that they are
-statewide scores. Based on my research, I expect the scores from Wake County to
-be higher than the state average and the scores for Apex schools to be higher
-than the average for Wake County. Still, guessing where they would score today
-is impossible.
+statewide scores (and old). Based on my research, I expect the scores from Wake
+County to be higher than the state average and the scores for Apex schools to be
+higher than the average for Wake County. Still, guessing where they would score
+today is no simple task.
 
-The private schools certainly had high ITBS scores last year, but their
-attendance is heavily skewed toward Asian and White students. These are the
-highest-performing demographic across the county. It is hard to say how much of
-the ITBS scores are due to simple demographics.
+The private schools certainly had high ITBS scores in 2018, but their attendance
+is heavily skewed toward Asian and White students. These are the
+highest-performing demographic groups across the county. It is hard to say how
+much of their ITBS scores are due to simple demographics.
 
 ## Conclusion
 
-All in all, none of our schools look like bad options, and we will tour them
+None of our schools look like bad options, and we will tour them
 all. As of this moment, my top choice is Peak Charter. If we win the lottery, it
 makes the decision easy. If we don't win, then deciding between Penny Road and
-Resurrection Lutheran will be difficult. It will likely come down to culture,
-personal preferences, and whether or not we can afford tuition.
+Resurrection Lutheran will be difficult. It will likely come down to school
+culture, personal preferences, and whether or not we can afford tuition.
 
 ## Reproducibility and Data
 
@@ -696,10 +731,12 @@ All the data and code used to perform this analysis is available on GitHub:
 
 I encountered many great resources during my investigation. 
 
-[Test Scores](http://www.ncpublicschools.org/accountability/reporting/)  
+[NC Report Cards](https://ncreportcards.ondemand.sas.com/src/?viewSelect=county&year=2018&type=Both&level=All&district=410&lng=en&currpage=1&county=wake)  
+[Raw Test Scores](http://www.ncpublicschools.org/accountability/reporting/)  
 [School GIS points](https://data-nconemap.opendata.arcgis.com/datasets/public-schools)  
 [Private Demographics](https://nces.ed.gov/surveys/pss/pssdata.asp)  
-[Public Demographics](https://nces.ed.gov/ccd/pubschuniv.asp)
+[Public Demographics](https://nces.ed.gov/ccd/pubschuniv.asp)  
+[National Report Cards (NAEP)](https://nces.ed.gov/nationsreportcard/)  
 
 Every public school (non-charter) in Wake County has a School Improvement Plan
 (SIP) that you can view online. This is a candid, introspective look by the
