@@ -193,8 +193,7 @@ estimation_tbl %>%
 
 This method of investigation isn't conclusive. It is possible that the test is
 fair, but that Asian parents favor (and can afford) areas within school
-districts that have better schools. Even so, the growth expectations for Asian
-students *should* (in a fair model) adjust over time to account for this.
+districts that have better schools.
 
 The chart below plots EVAAS scores compared to the percent of Black students at
 each school. It shows a troubling trend in the opposite direction. Schools with
