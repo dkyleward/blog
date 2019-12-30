@@ -1,0 +1,262 @@
+---
+title: EVAAS Deep Dive
+author: Kyle Ward
+date: '2019-12-19'
+slug: evaas-deep-dive
+categories:
+  - Education
+tags:
+  - R, Education
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2019-11-26T20:52:45-05:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+draft: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(here)
+library(plotly)
+library(sf)
+library(leaflet)
+library(leaflet.minicharts)
+library(leafsync)
+library(RColorBrewer)
+```
+
+## Intro
+
+In my article on [choosing a school in Wake
+County](/2019/11/15/choosing-school-wake-county), I used
+[EVAAS](https://ncdpi.sas.com/) growth scores along with
+[EOGs](https://www.dpi.nc.gov/districts-schools/testing-and-school-accountability/state-tests/end-grade-eog)
+to prioritize schools for my son. At the time, I could find little documentation
+on EVAAS and decided to put more emphasis on the EOG scores.
+
+Since then, more digging turned up this [white
+paper](https://www.sas.com/content/dam/SAS/en_us/doc/whitepaper1/sas-evaas-k12-statistical-models-107411.pdf)
+from SAS. The white paper outlines the model form and explains how certain
+metrics are generated. There are enough formulas to scare off laypeople, but
+their fixed effects matrix is not published for statisticians. In short, the
+model remains a black box. (Bonus: for a better intro to mixed linear models
+like EVAAS, see [this
+one](https://stats.idre.ucla.edu/other/mult-pkg/introduction-to-linear-mixed-models/)
+from UCLA. It uses doctors/patients rather than teachers/students but is otherwise
+the same.)
+
+While reverse-engineering the model is impossible, I decided to investigate the
+results for potential bias.
+
+## Investigating EVAAS
+
+Imagine someone claimed to have a cube, but they wouldn't let you examine it
+first hand. Instead, you could only see pictures of the six sides (top, bottom,
+left, right, front, and back). You would expect each of those pictures to look
+like squares. If they didn't, you would know it wasn't a cube.
+
+SAS claims the EVAAS model is a robust measure of achievement for teachers,
+schools, and districts. Importantly, it is supposed to account for things like
+race, socio-economic status and district by tracking the same children over
+time. We can't see the model, but we can look at the results from several angles
+to investigate their claims.
+
+```{r, include=FALSE}
+growth_csv <- here(
+  "static", "data", "2019-11-15-picking-a-school", "test_results",
+  "school_growth.zip"
+)
+growth_tbl <- read_csv(growth_csv) %>%
+  select(
+    ID = `School Code`,
+    board = `State Board Region`,
+    district = `District Name`,
+    school = `School Name`,
+    grade = `Grade Span`,
+    subgroup = Subgroup,
+    growth_type = `School Growth Type`,
+    growth_status = `School Growth Status`,
+    growth_index = `School Growth Index Score`
+  )
+public_demo_file <- here(
+  "static", "data", "2019-11-15-picking-a-school",
+  "public_school_demographics", "nces_demographic_data_nc.zip"
+)
+public_demo_tbl <- read_csv(public_demo_file) %>%
+  mutate(
+    ID = gsub("NC-", "", ST_SCHID),
+    ID = gsub("-", "", ID)
+  )
+public_demo_summary <- public_demo_tbl %>%
+  mutate(
+    RACE_ETHNICITY = case_when(
+      RACE_ETHNICITY == "American Indian or Alaska Native" ~ "Other",
+      RACE_ETHNICITY == "Black or African American" ~ "Black",
+      RACE_ETHNICITY == "Hispanic/Latino" ~ "Hispanic",
+      RACE_ETHNICITY == "Native Hawaiian or Other Pacific Islander" ~ "Other",
+      RACE_ETHNICITY == "Two or more races" ~ "Other",
+      RACE_ETHNICITY == "Not Specified" ~ "Other",
+      TRUE ~ RACE_ETHNICITY
+    )
+  ) %>%
+  group_by(ID, school = SCH_NAME, race = RACE_ETHNICITY) %>%
+  summarize(students = sum(STUDENT_COUNT, na.rm = TRUE)) %>%
+  filter(race != "No Category Codes") %>%
+  mutate(percent = students / sum(students) * 100)
+
+
+public_lunch_file <- here(
+  "static", "data", "2019-11-15-picking-a-school",
+  "public_school_demographics", "nces_lunch_program_data_nc.zip"
+)
+public_lunch_tbl <- read_csv(public_lunch_file) %>%
+  mutate(
+    ID = gsub("NC-", "", ST_SCHID),
+    ID = gsub("-", "", ID)
+  )
+public_lunch_summary <- public_demo_tbl %>%
+  filter(TOTAL_INDICATOR == "Education Unit Total") %>%
+  select(ID, school = SCH_NAME, all_students = STUDENT_COUNT) %>%
+  left_join(
+    public_lunch_tbl %>%
+      filter(LUNCH_PROGRAM == "No Category Codes") %>%
+      select(ID, lunch_students = STUDENT_COUNT),
+    by = "ID"
+  ) %>%
+  mutate(
+    `Free Lunch` = round(lunch_students / all_students * 100, 1),
+    `Paid Lunch` = round(100 - `Free Lunch`, 1)
+  ) %>%
+  select(ID, `Free Lunch`, `Paid Lunch`)  
+
+# I downloaded the public school shapefile here:
+# https://data-nconemap.opendata.arcgis.com/datasets/public-schools
+# It does not include charter schools.
+public_file <- here(
+  "static", "data", "2019-11-15-picking-a-school", "public_school_shapefile",
+  "Public_Schools.shp"
+)
+public_shp <- st_read(public_file, quiet = TRUE) %>%
+  st_transform(4326) %>%
+  mutate(
+    ID = LEA_SCHOOL,
+    Type = ifelse(SCH_DESG == "Charter", "Public Charter", "Public")
+  )
+
+estimation_tbl <- public_demo_summary %>%
+  select(ID, school, race, percent) %>%
+  spread(key = race, value = percent) %>%
+  left_join(public_lunch_summary, by = "ID") %>%
+  left_join(
+    growth_tbl %>%
+      filter(subgroup == "All Students", growth_type == "Overall") %>%
+      select(ID, growth_index),
+    by = "ID"
+  ) %>%
+  # commenting this out for now. I'm not using `type`, and not all schools are
+  # in the shapefile, so some get dropped.
+  # left_join(
+  #   public_shp %>% 
+  #     as.data.frame() %>%
+  #     select(ID = LEA_SCHOOL, SCHOOL_NAM, type = SCH_DESG) %>%
+  #     mutate(ID = as.character(ID)),
+  #   by = "ID"
+  # ) %>%
+  filter_all(all_vars(!is.na(.)))
+```
+
+The chart below provides one angle. Each dot is a school. Its position is based
+on its EVAAS growth score (y-axis) and the percent of Asian students attending
+(x-axis). If the test was fair, the dots should be randomly scattered around a
+growth index of 0. Instead, schools tend to get better EVAAS scores as the
+percent of Asian students increases.
+
+```{r}
+estimation_tbl %>%
+  filter(Asian <= 20) %>%
+  ggplot(aes(x = Asian, y = growth_index)) +
+  geom_point(aes(x = Asian, y = growth_index), alpha = .1) +
+  geom_abline(slope = 0, intercept = 0, color = "blue") +
+  geom_smooth(method = "lm", color = "red") +
+  xlab("% Asian") +
+  ylab("EVAAS Growth Index")
+```
+
+This method of investigation isn't conclusive. It is possible that the test is
+fair, but that Asian parents favor (and can afford) areas within school
+districts that have better schools. Even so, the growth expectations for Asian
+students *should* (in a fair model) adjust over time to account for this.
+
+The chart below plots EVAAS scores compared to the percent of Black students at
+each school. It shows a troubling trend in the opposite direction. Schools with
+more Black students receive noticeably lower EVAAS scores.
+
+```{r}
+text_df <- tibble(
+  x = c(0, 100),
+  y = c(2.5, -3),
+  text = c("1", "-1.5")
+)
+
+estimation_tbl %>%
+  ggplot(aes(x = Black, y = growth_index)) +
+  geom_point(aes(x = Black, y = growth_index), alpha = .1) +
+  geom_abline(slope = 0, intercept = 0, color = "blue") +
+  geom_smooth(method = "lm", color = "red") +
+  geom_label(data = text_df, aes(x = x, y = y, label = text), size = 3) +
+  geom_abline(slope = 0, intercept = 1, linetype = "dashed") +
+  geom_abline(slope = 0, intercept = -1.5, linetype = "dashed") +
+  xlab("% Black") +
+  ylab("EVAAS Growth Index")
+```
+
+These findings are consistent with an analysis of the Houston Independent School
+District published in the education journal Phi Delta Kappan
+([link](https://kappanonline.org/sizzle-no-steak-value-added-model-doesnt-add-value-houston/)).
+The authors had access to individual teacher scores, and they found that teacher
+scores were correlated with race and subject matter. While the article takes a
+strong anti-EVAAS position, it also points out that there are competing
+interpretations for these findings.
+
+The charts below are included primarily for completeness. They show the EVAAS
+scores along all the dimensions I have access to. Each plot is like looking
+at one side of the EVAAS model "cube".
+
+```{r}
+estimation_tbl %>%
+  rename(`Other Race` = Other) %>%
+  gather(key = dimension, value = percent, Asian:`Free Lunch`) %>%
+  ggplot(aes(x = percent, y = growth_index)) +
+  geom_point(aes(x = percent, y = growth_index), alpha = .1) +
+  geom_abline(slope = 0, intercept = 0, color = "blue") +
+  geom_smooth(method = "lm", color = "red") +
+  facet_wrap(~dimension) +
+  xlab("Percent") +
+  ylab("EVAAS Growth Index")
+```
+
+
+## Conclusion
+
+SAS claims the EVAAS model is fair because student growth expectations account
+for factors like race and school district. Instead, scores are still
+correlated along racial and economic dimensions. While this doesn't prove the
+model is unfair, teachers and schools with large disadvantaged populations
+should expect more transparency from a system that claims to grade their value.
+
+## Reproducibility and Data
+
+All the data and code used to perform this analysis is available on GitHub:
+
+[Data](https://github.com/dkyleward/blog/tree/master/static/data/2019-11-15-picking-a-school)  
+[Code](https://github.com/dkyleward/blog/blob/master/content/post/2012-12-19-evaas-deep-dive/2012-12-19-evaas-deep-dive.Rmd) 
+

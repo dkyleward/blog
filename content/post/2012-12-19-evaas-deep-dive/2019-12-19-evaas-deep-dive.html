@@ -1,0 +1,98 @@
+---
+title: EVAAS Deep Dive
+author: Kyle Ward
+date: '2019-12-19'
+slug: evaas-deep-dive
+categories:
+  - Education
+tags:
+  - R, Education
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2019-11-26T20:52:45-05:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+draft: false
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+<div id="intro" class="section level2">
+<h2>Intro</h2>
+<p>In my article on <a href="/2019/11/15/choosing-school-wake-county">choosing a school in Wake
+County</a>, I used
+<a href="https://ncdpi.sas.com/">EVAAS</a> growth scores along with
+<a href="https://www.dpi.nc.gov/districts-schools/testing-and-school-accountability/state-tests/end-grade-eog">EOGs</a>
+to prioritize schools for my son. At the time, I could find little documentation
+on EVAAS and decided to put more emphasis on the EOG scores.</p>
+<p>Since then, more digging turned up this <a href="https://www.sas.com/content/dam/SAS/en_us/doc/whitepaper1/sas-evaas-k12-statistical-models-107411.pdf">white
+paper</a>
+from SAS. The white paper outlines the model form and explains how certain
+metrics are generated. There are enough formulas to scare off laypeople, but
+their fixed effects matrix is not published for statisticians. In short, the
+model remains a black box. (Bonus: for a better intro to mixed linear models
+like EVAAS, see <a href="https://stats.idre.ucla.edu/other/mult-pkg/introduction-to-linear-mixed-models/">this
+one</a>
+from UCLA. It uses doctors/patients rather than teachers/students but is otherwise
+the same.)</p>
+<p>While reverse-engineering the model is impossible, I decided to investigate the
+results for potential bias.</p>
+</div>
+<div id="investigating-evaas" class="section level2">
+<h2>Investigating EVAAS</h2>
+<p>Imagine someone claimed to have a cube, but they wouldn’t let you examine it
+first hand. Instead, you could only see pictures of the six sides (top, bottom,
+left, right, front, and back). You would expect each of those pictures to look
+like squares. If they didn’t, you would know it wasn’t a cube.</p>
+<p>SAS claims the EVAAS model is a robust measure of achievement for teachers,
+schools, and districts. Importantly, it is supposed to account for things like
+race, socio-economic status and district by tracking the same children over
+time. We can’t see the model, but we can look at the results from several angles
+to investigate their claims.</p>
+<p>The chart below provides one angle. Each dot is a school. Its position is based
+on its EVAAS growth score (y-axis) and the percent of Asian students attending
+(x-axis). If the test was fair, the dots should be randomly scattered around a
+growth index of 0. Instead, schools tend to get better EVAAS scores as the
+percent of Asian students increases.</p>
+<p><img src="/post/2012-12-19-evaas-deep-dive/2019-12-19-evaas-deep-dive_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>This method of investigation isn’t conclusive. It is possible that the test is
+fair, but that Asian parents favor (and can afford) areas within school
+districts that have better schools. Even so, the growth expectations for Asian
+students <em>should</em> (in a fair model) adjust over time to account for this.</p>
+<p>The chart below plots EVAAS scores compared to the percent of Black students at
+each school. It shows a troubling trend in the opposite direction. Schools with
+more Black students receive noticeably lower EVAAS scores.</p>
+<p><img src="/post/2012-12-19-evaas-deep-dive/2019-12-19-evaas-deep-dive_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>These findings are consistent with an analysis of the Houston Independent School
+District published in the education journal Phi Delta Kappan
+(<a href="https://kappanonline.org/sizzle-no-steak-value-added-model-doesnt-add-value-houston/">link</a>).
+The authors had access to individual teacher scores, and they found that teacher
+scores were correlated with race and subject matter. While the article takes a
+strong anti-EVAAS position, it also points out that there are competing
+interpretations for these findings.</p>
+<p>The charts below are included primarily for completeness. They show the EVAAS
+scores along all the dimensions I have access to. Each plot is like looking
+at one side of the EVAAS model “cube”.</p>
+<p><img src="/post/2012-12-19-evaas-deep-dive/2019-12-19-evaas-deep-dive_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>SAS claims the EVAAS model is fair because student growth expectations account
+for factors like race and school district. Instead, scores are still
+correlated along racial and economic dimensions. While this doesn’t prove the
+model is unfair, teachers and schools with large disadvantaged populations
+should expect more transparency from a system that claims to grade their value.</p>
+</div>
+<div id="reproducibility-and-data" class="section level2">
+<h2>Reproducibility and Data</h2>
+<p>All the data and code used to perform this analysis is available on GitHub:</p>
+<p><a href="https://github.com/dkyleward/blog/tree/master/static/data/2019-11-15-picking-a-school">Data</a><br />
+<a href="https://github.com/dkyleward/blog/blob/master/content/post/2012-12-19-evaas-deep-dive/2012-12-19-evaas-deep-dive.Rmd">Code</a></p>
+</div>
