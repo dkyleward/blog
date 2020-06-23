@@ -25,7 +25,9 @@ library(RColorBrewer)
 ```
 
 ```{r}
-xlsx <- here::here("static", "data", "June 2019 Adjusted Database.xlsx")
+xlsx <- here::here(
+  "static", "data", "2019-09-03-transit", "June 2019 Adjusted Database.xlsx"
+)
 upt_tbl_raw <- read_excel(xlsx, sheet = "UPT")
 
 # We will use this table as a starting point for several charts below

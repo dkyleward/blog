@@ -577,8 +577,10 @@ from earlier.
 ```{r}
 local_public_schools <- c(
     "Peak Charter Academy",
-    "Oak Grove Elementary",
-    "Penny Road Elementary"
+    # "Oak Grove Elementary",
+    # "Penny Road Elementary"
+    "Salem Elementary",
+    "Baucom Elementary"
   )
 
 local_tbl <- chart_tbl %>%

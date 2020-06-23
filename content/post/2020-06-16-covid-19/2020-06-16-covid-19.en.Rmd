@@ -1,0 +1,925 @@
+---
+title: COVID-19
+author: Kyle Ward
+date: '2020-06-19'
+slug: covid-19
+categories:
+  - Health
+tags: []
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2020-06-16T22:05:27-04:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+draft: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.height = 4)
+library(tidyverse)
+library(lubridate)
+library(zoo)
+library(plotly)
+library(here)
+library(tidycensus)
+library(rvest)
+library(knitr)
+library(kableExtra)
+library(readxl)
+```
+
+Data source: https://covidtracking.com/
+
+```{r, message=FALSE}
+# Get data from covidtracking.com and store a copy in this repo. To update the
+# data, delete the nation and state CSV files in this repo.
+
+nation_csv <- here("static", "data", "2020-06-16-covid-19", "nation.csv")
+if (!file.exists(nation_csv)) {
+  nation <- read_csv(url("https://covidtracking.com/api/v1/us/daily.csv"))
+  nation <- nation %>%
+    filter(states == 56) %>%
+    mutate(date = ymd(date)) %>%
+    arrange(date)
+  write_csv(nation, nation_csv)
+}
+
+states_csv <- here("static", "data", "2020-06-16-covid-19", "states.csv")
+if (!file.exists(states_csv)) {
+  states <- read_csv(url("https://covidtracking.com/api/v1/states/daily.csv"))
+  states <- states %>%
+    filter(!is.na(dateChecked)) %>%
+    mutate(
+      date = ymd(date),
+      region = state.region[match(state, state.abb)]
+    ) %>%
+    arrange(state, date)
+  
+  # Grab census population data by state and add to state table
+  api_key <- Sys.getenv("CENSUS_API_KEY")
+  acs <- get_acs(
+    "state",
+    variables = "B01003_001E",
+    year = 2018
+  )
+  states <- states %>%
+    left_join(
+      acs %>% select(GEOID, population = estimate),
+      by = c("fips" = "GEOID")
+    ) %>%
+    filter(!is.na(population))
+  
+  # Add governor data to the state table
+  state_abb <- setNames(state.abb, state.name)
+  wikiurl <- "https://en.wikipedia.org/wiki/List_of_current_United_States_governors_by_age"
+  data <- wikiurl %>%
+    xml2::read_html()
+  gov_tbl <- html_table(data)[[1]] %>%
+    mutate(state = as.character(state_abb[State])) %>%
+    select(state, state_full = State, Party)
+  states <- states %>%
+    left_join(gov_tbl, by = "state") %>%
+    filter(!is.na(Party))
+  
+  
+  # Add lock down dates
+  balloturl <- "https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020"
+  data <- balloturl %>%
+    xml2::read_html()
+  data <- html_table(data, fill = TRUE)[[3]]
+  data <- data[2:nrow(data), 1:2]
+  colnames(data) <- c("state", "date")
+  data <- data %>%
+    separate(date, c("start", "stop"), sep = "-") %>%
+    separate(stop, c(NA, "month", "day", NA), sep = " ") %>%
+    separate(day, c("day", NA), sep = "\\[") %>%
+    unite(stop, month, day, sep = " ") %>%
+    mutate(
+      start = paste(start, "2020"),
+      start = mdy(start),
+      stop = paste(stop, "2020"),
+      stop = ifelse(grepl("TBD", stop), "June 16 2020", stop),
+      stop = mdy(stop),
+      days = stop - start,
+      days = ifelse(is.na(days), 0, days)
+    ) %>%
+    select(state, lockdown_days = days)
+  states <- states %>%
+    left_join(data, by = c("state_full" = "state"))
+  
+  write_csv(states, states_csv)
+}
+
+nation <- read_csv(nation_csv)
+states <- read_csv(states_csv)
+```
+
+### New Cases
+
+The chart below shows the number of daily new cases. The orange line is a 15-day
+rolling average. The rolling average suggests that daily new cases calmed after
+an initial spike, but the past week suggests that the trend could reverse. This
+has prompted 24-hour news coverage of the "second wave".
+
+```{r}
+temp <- nation %>%
+  mutate(sma = rollmean(positiveIncrease, 15, na.pad = TRUE, align = "right"))
+
+plot_ly(data = temp) %>%
+  add_trace(
+    x = ~date, 
+    y = ~round(positiveIncrease, -2),
+    type = "bar", name = "New Cases"
+  ) %>%
+  add_trace(
+    x = ~date, y = ~sma, type = "scatter", mode = "lines", hoverinfo = "none",
+    name = "15-day SMA"
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+It's important to remember the context: Black Lives Matter protests have been
+happening for three weeks. It is a reasonable hypothesis that these protests
+could cause the virus to spread faster.
+
+Increased testing is another plausible reason. More tests means more cases
+detected. The charts below plots daily positive and negative cases. The first
+plot shows the absolute daily totals or positive and negative test results. The
+second chart shows the rate of positive tests per 1000 tests.
+
+While daily testing is rising, new cases are relatively flat. This runs contrary
+(so far) to predictions made that Memorial Day weekend activities and protests
+would cause the virus to spread rapidly.
+
+```{r, fig.height=3}
+plot_ly(data = nation) %>%
+  add_trace(
+    x = ~date,
+    y = ~round(positiveIncrease, -2),
+    type = "scatter", mode = "line",
+    name = "Positive"
+  ) %>%
+  add_trace(
+    x = ~date,
+    y = ~round(negativeIncrease, -2),
+    type = "bar",
+    name = "Negative"
+  ) %>%
+  layout(
+    title = "Daily Postive and Negative Cases",
+    yaxis = list(title = "Count"),
+    xaxis = list(title = NA)
+  ) %>%
+  layout(
+    legend = list(x = .1, y = .9),
+    hovermode = "x unified"
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+```{r, fig.height=3}
+temp <- nation %>%
+  mutate(
+    positive_rate = round(positiveIncrease / totalTestResultsIncrease * 1000, 1)
+  )
+  
+plot_ly(data = temp) %>%
+  add_trace(
+    x = ~date, y = ~positive_rate, type = "bar", name = "Positive"
+  ) %>%
+  layout(
+    title = "Daily Positives per 1k Tests",
+    yaxis = list(
+      title = "Positives per 1k Tests"
+    ),
+    xaxis = list(title = NA)
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+It is also worth noting that the high rates of positive cases in April were
+likely the result of limited tests being reserved for people with COVID-like
+symptoms. As testing has increased, a more accurate measure of the infection
+rate has emerged.
+
+### Hospitalizations
+
+A count of daily hospitalizations offer perhaps the best way to track the risk
+posed by COVID-19. In the chart below, each bar represents the number of people
+in the hospital on that day due to the virus. This metric has consistently
+fallen since April 21, 2020, but has flattened in the last four days. It's too
+early to tell if the past four days signal a change in direction, but it will
+be easy to tell within the next week.
+
+```{r}
+plot_ly(data = nation) %>%
+  add_trace(
+    x = ~date, y = ~hospitalizedCurrently, type = "bar", name = "Positive"
+  ) %>%
+  layout(
+    title = "Daily Hospitalized",
+    yaxis = list(title = "Hospitalized"),
+    xaxis = list(title = "")
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+### Deaths
+
+Similar to hospitalizations, deaths offer a metric that is easier to consume
+without worrying about sample size issues (as with positive test counts). One
+interesting feature of the data is a weekly cycle where most deaths are reported
+mid week with fewer reported on the weekends. I can only guess at why, but it
+could be something as simple as the work schedules of hospital clerical staff.
+
+In the chart below, the 15-day moving average smooths out the cyclical pattern
+and makes the decreasing trend clear. Deaths have been falling since late April;
+however, deaths are a lagging indicator. In the event of a second wave, you
+would expect to see hospitalizations go up first followed by rising deaths.
+
+```{r}
+temp <- nation %>%
+  mutate(sma = rollmean(deathIncrease, 15, na.pad = TRUE, align = "right"))
+
+plot_ly(data = temp) %>%
+  add_trace(
+    x = ~date, y = ~deathIncrease, type = "bar", name = "Positive"
+  ) %>%
+  add_trace(
+    x = ~date, y = ~sma, type = "scatter", mode = "lines", name = "15-day SMA"
+  ) %>%
+  layout(
+    title = "Daily Deaths",
+    showlegend = FALSE,
+    xaxis = list(title = ""),
+    yaxis = list(title = "Deaths")
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+### National Summary
+
+Perhaps the most important take away from the above review is that daily
+hospitalization rates are the best statistic to broadcast. They don't require
+adjustment based on the amount of testing and they aren't a lagging indicator
+like daily deaths.
+
+Most media stories I'm seeing are misrepresenting the data by focusing on the
+absolute number of new cases. Without adjusting for the amount of testing, this
+is the worst metric to use.
+
+## State Data
+
+While the nation as a whole is trending in the right direction, decisions to
+re-open are made state by state. Fortunately, we can look at the same metrics
+for each state. Additionally, the actions taken by different states may create
+natural experiments for us to examine.
+
+### Positive Test Rate
+
+The table below, for example, shows the positive testing rate by day for
+a handful of states. Issues with the daily state data create some noise, but
+the different patterns are easy to see.
+
+```{r}
+temp <- states %>%
+  arrange(state, date) %>%
+  filter(
+    state %in% c("NC", "SC", "GA", "NY"),
+    date > ymd("2020-03-20")
+  ) %>%
+  group_by(state) %>%
+  mutate(
+    positive_rate = round(positive / totalTestResults * 1000, 1)
+  ) %>%
+  ungroup() %>%
+  select(state, date, positive_rate)
+
+plot_ly(data = temp) %>%
+  add_trace(
+    x = ~date, y = ~positive_rate, type = "scatter", mode = "markers",
+    color = ~state
+  ) %>%
+  layout(
+    title = "Daily Positive Testing Rate",
+    yaxis = list(
+      title = "Positives per 1k"
+    ),
+    xaxis = list(
+      title = NA
+    )
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+### Death Rate
+
+At the state level, comparing absolute deaths would also be misleading. States like New York and California have more people, which means more deaths. As did
+with positive test cases, we will convert deaths in a rate: the deaths per
+one million people.
+
+Even with this adjustment, the chart below shows how severe the problem became
+in NY.
+
+```{r}
+temp <- states %>%
+  arrange(state, date) %>%
+  filter(
+    state %in% c("NC", "SC", "GA", "NY", "CA", "TX"),
+    date > ymd("2020-03-20")
+  ) %>%
+  mutate(
+    death_rate = deathIncrease / population * 1000000
+  )
+
+plot_ly(data = temp) %>%
+  add_trace(
+    x = ~date, y = ~death_rate, type = "scatter", mode = "markers",
+    color = ~state
+  ) %>%
+  layout(
+    title = "Daily Deaths by State",
+    yaxis = list(
+      title = "Deaths per Million"
+    ),
+    xaxis = list(
+      title = NA
+    )
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+*Note: Some states like NJ and PA have single days with worse rates, but their
+daily data is very noisy and I didn't include them.*
+
+## Grouping by Region
+
+To get started, the charts below show the rates of positive tests and deaths on
+a weekly basis. Any state that experienced a weekly death rate above 50 per
+million is labeled. Both tabs using the following common layout:
+
+  * x-axis: deaths per million
+  * y-axis: positive tests per thousand
+  * circle size: population (source: Census ACS)
+  * color: region
+
+The most notable pattern in the data is the separation of northeastern states
+around New York City from the rest of the country in terms of death rate.
+Another dominant pattern is that nearly all states are experiencing falling
+rates of deaths and positive tests (movement towards the bottom left).
+
+```{r}
+animation_df <- states %>%
+  arrange(state, date) %>%
+  mutate(week = week(date)) %>%
+  group_by(state, week) %>%
+  summarize(
+    positiveIncrease = sum(positiveIncrease),
+    totalTestResultsIncrease = sum(totalTestResultsIncrease),
+    deathIncrease = sum(deathIncrease),
+    Party = first(Party),
+    population = first(population),
+    lockdown_days = first(lockdown_days),
+    state_full = first(state_full),
+    region = first(region)
+  ) %>%
+  filter(week > 12, week != 25) %>%
+  mutate(
+    week = week - 12,
+    positive_rate = round(positiveIncrease / totalTestResultsIncrease * 1000, 1),
+    # some errors in the reported data lead to 1-2 negative numbers
+    positive_rate = pmax(positive_rate, 0),
+    death_rate = round(deathIncrease / population * 1000000, 4),
+    lockdown_class = case_when(
+      lockdown_days > 60 ~ "Long",
+      lockdown_days > 30 ~ "Medium",
+      lockdown_days == 0 ~ "None",
+      TRUE ~ "Short"
+    ),
+    lockdown_class = factor(
+      lockdown_class,
+      levels = c("Long", "Medium", "Short", "None"),
+      ordered = TRUE
+    )
+  ) %>%
+  ungroup()
+
+
+# Also create a DF of just those states to be labeled. Label any state that
+# exceeded 50 dpm in any week.
+labels <- animation_df %>%
+  group_by(state) %>%
+  mutate(exceeded_50dpm = ifelse(max(death_rate) > 50, 1, 0)) %>%
+  filter(exceeded_50dpm == 1)
+
+num_of_states_over_50dpm <- length(unique(labels$state ))
+
+plot_ly(data = animation_df) %>%
+  add_trace(
+    x = ~death_rate, y = ~positive_rate, 
+    type = "scatter", mode = "markers",
+    size = ~population,
+    # color = "orange",
+    color = ~region,
+    alpha = .05, alpha_stroke = .05, showlegend = FALSE,
+    hoverinfo = "none"
+  ) %>%
+  add_trace(
+    x = ~death_rate, y = ~positive_rate, 
+    type = "scatter", mode = "markers",
+    marker = list(
+      line = list(
+        color = rgb(49, 52, 56, maxColorValue = 255)
+      )
+    ),
+    color = ~region,
+    ids = ~state, frame = ~week,
+    size = ~population,
+    hoverinfo = "text",
+    text = ~paste0(
+      "<br>", state, " week ", week,
+      "<br> Deaths: ", round(death_rate, 0), "/M",
+      "<br> Positives: ", round(positive_rate, 0), "/k"
+    )
+  ) %>%
+  add_text(
+    data = labels, text = ~state,
+    x = ~death_rate, y = ~positive_rate, ids = ~state, frame = ~week,
+    textposition = "top", showlegend = FALSE
+  ) %>%  
+  layout(
+    title = "Weekly Metrics by State",
+    yaxis = list(
+      title = "Postives per 1k Tests"
+    ),
+    xaxis = list(
+      title = "Deaths per Million",
+      range = c(0, 273)
+    )
+  ) %>%
+  config(displayModeBar = FALSE) %>%
+  animation_opts(frame = 1500)
+```
+
+## New York City
+
+New York City is the [densest city in the
+US](https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population),
+has the most [air
+travel](https://en.wikipedia.org/wiki/List_of_busiest_city_airport_systems_by_passenger_traffic),
+and has [transit ridership](/2019/09/03/understanding-transit-ridership-trends/)
+that dwarfs other cities. These factors make it a hotbed for viral transmission.
+
+The map below shows the peak death rate experienced in each state. The impact of
+New York City can be seen in the surrounding states. Outside of the northeast,
+the peak death rates were much lower. (The CDC
+[linked](https://www.cdc.gov/mmwr/volumes/69/wr/mm6915e4.htm?s_cid=mm6915e4_w)
+Louisiana's high peak death rate with Mardi Gras.)
+
+```{r}
+peak_deaths <- animation_df %>%
+  group_by(state) %>%
+  mutate(peak_death_rate = max(death_rate)) %>%
+  filter(death_rate == peak_death_rate) %>%
+  slice(1)
+
+plot_geo() %>%
+  add_trace(
+    z = ~peak_deaths$peak_death_rate,
+    hoverinfo = "text",
+    # text = state.name,
+    text = paste0(
+      "<br> ", state.name,
+      "<br> Peak Rate: ", round(peak_deaths$peak_death_rate, 1)
+    ),
+    span = I(0),
+    locations = peak_deaths$state, locationmode = 'USA-states'
+  ) %>%
+  layout(
+    geo = list(
+      scope = 'usa',
+      projection = list(type = 'albers usa'),
+      lakecolor = toRGB('white')    
+    )
+  ) %>%
+  colorbar(
+    title = paste0(
+      "Peak Death Rate",
+      "<br> (deaths per million)"
+    )
+  )
+```
+
+## Comparing to California
+
+California shares many similarities with New York, but it's experience so far
+with the virus has been much less severe. Comparing the states reveals important
+similarities and differences that could explain the different experience. It's
+also helpful that they initiated stay-at-home orders [within a day of each other](https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020).
+
+### Density
+
+While New York City is the largest, densest city in the country, cities in California aren't far behind. The table below
+shows the US cities with population densities above 10k people per square mile
+([source](https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population)).
+
+```{r}
+city_dens_url <- "https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"
+data <- city_dens_url %>%
+    xml2::read_html()
+density_tbl <- html_table(data, fill = TRUE)[[5]]
+density_tbl <- density_tbl[, c(2:4, 9)] %>%
+  select(
+    City, State = `State[c]`, Density = `2016 population density`,
+    Population = `2019estimate`
+  ) %>%
+  mutate(
+    City = gsub("\\[.*", "", City),
+    density_num = gsub("/sq\\smi|,", "", Density),
+    density_num = as.numeric(density_num)
+  ) %>%
+  arrange(desc(density_num))
+
+density_tbl %>%
+  mutate(
+    State = cell_spec(State, "html", color = case_when(
+      State == "California" ~ "red",
+      State == "New York" ~ "blue",
+      TRUE ~ "gray"
+    )),
+    City = cell_spec(City, "html", color = case_when(
+      .$State == "California" ~ "red",
+      .$State == "New York" ~ "blue",
+      TRUE ~ "gray"
+    ))
+  ) %>%
+  filter(density_num >= 10000) %>%
+  select(-density_num) %>%
+  kable(format = "html", escape = FALSE, row.names = FALSE) %>%
+  kable_styling(full_width = FALSE)
+```
+
+### Air Travel
+
+Los Angeles and San Francisco both have healthy 
+[air travel](https://en.wikipedia.org/wiki/List_of_busiest_city_airport_systems_by_passenger_traffic).
+
+```{r}
+air_url <- "https://en.wikipedia.org/wiki/List_of_busiest_city_airport_systems_by_passenger_traffic"
+data <- air_url %>%
+    xml2::read_html()
+air_tbl <- html_table(data, fill = TRUE)[[5]] %>%
+  filter(`Metropolitan area` %in% c(
+    "New York City", "Los Angeles", "Atlanta", "Chicago",
+    "Miami", "San Francisco Bay Area"
+  )) %>%
+  select(
+    Metro = `Metropolitan area`,
+    `Yearly Passengers` = Totalpassengers,
+    `Airport(s)` = `Airport(s) included`
+  )
+
+air_tbl %>%
+  mutate(
+    Metro = cell_spec(Metro, "html", color = case_when(
+      Metro %in% c("Los Angeles", "San Francisco Bay Area") ~ "red",
+      Metro == "New York City" ~ "blue",
+      TRUE ~ "gray"
+    ))
+  ) %>%
+  kable(format = "html", escape = FALSE, row.names = FALSE) %>%
+  kable_styling(full_width = FALSE)
+```
+
+### Transit
+
+In my post on [transit ridership trends](/2019/09/03/understanding-transit-ridership-trends/), I used the chart
+below to show just how much larger the transit market is in NYC compared to
+the rest of the country.
+
+```{r}
+xlsx <- here::here(
+  "static", "data", "2020-06-16-covid-19", "April 2020 Adjusted Database.xlsx"
+)
+upt_tbl_raw <- read_excel(xlsx, sheet = "UPT")
+
+upt_tbl <- upt_tbl_raw %>%
+  filter(Active == "Active") %>%
+  gather(key = "month_year", value = "trips", JAN02:APR20) %>%
+  mutate(
+    year = substr(
+      month_year, start = str_length(month_year) - 1, stop = str_length(month_year)
+    ),
+    month = substr(month_year, start = 1, stop = 3),
+    date = parse_date_time2(month_year, orders = "my")
+  ) %>%
+  arrange(Agency, date)
+
+# shortens the agency name to the first 4 characters. Improves legend.
+shorten_agency <- function(Agency){
+  Agency = gsub("[^a-zA-Z0-9 _]", "", Agency)
+  word_count = str_count(Agency, "\\W+") + 1
+  agency_short = word(Agency, 1, pmin(word_count, 4))
+  return(agency_short)
+}
+```
+
+```{r, out.width="100%", warning=FALSE}
+data1 <- upt_tbl %>%
+  filter(month_year == "JUN19") %>%
+  group_by(Agency) %>%
+  summarize(Trips = round(sum(trips, na.rm = TRUE), -4)) %>%
+  arrange(desc(Trips)) %>%
+  head(10) %>%
+  arrange(Trips) %>%
+  mutate(Agency = shorten_agency(Agency))
+
+plot_ly(
+  data1, y = ~Agency, x = ~Trips, type = "bar", orientation = "h",
+  text = ~Agency, textposition = "auto", hoverinfo = 'x'
+) %>%
+  layout(
+    title = "Top 10 Transit Agencies (June 2019 trips)",
+    yaxis = list(
+      categoryorder = "array",
+      categoryarray = ~Agency,
+      showticklabels = FALSE
+    )
+  ) %>%
+  config(displayModeBar = FALSE)
+
+transit_multiple <- round(
+  data1$Trips[data1$Agency == "MTA New York City"] / 
+    data1$Trips[data1$Agency == "Los Angeles County Metropolitan"],
+  1
+)
+```
+
+Unlike the modest differences in density or air travel, NYC transit is `r
+transit_multiple` times larger than the largest market in California during
+usual operation. People crammed into enclosed spaces on the NYC city are primed
+to spread the disease.
+
+As the pandemic spread, San Francisco [closed their
+subway](https://sf.curbed.com/2020/3/26/21195566/muni-trains-covid-19-sf-underground-subway)
+while Los Angeles cut back transit service after [steep drops in
+ridership]((https://www.latimes.com/california/story/2020-04-17/coronavirus-cuts-los-angeles-metro-bus-train-service)).
+NYC also saw reduced ridership and ran reduced service, but they only [closed
+the
+subway](https://abc7ny.com/subway-cleaning-plan-mta-coronavirus-nyc/6155622/)
+between 1:00 am and 5:00 am,
+
+The chart below updates my original 2019 chart with April 2020 data. NYC
+still recorded more than twice the ridership of Los Angeles.
+
+```{r, out.width="100%", warning=FALSE}
+april20_data <- upt_tbl %>%
+  filter(month_year == "APR20") %>%
+  group_by(Agency) %>%
+  summarize(Trips = round(sum(trips, na.rm = TRUE),-4)) %>%
+  arrange(desc(Trips)) %>%
+  head(10) %>%
+  arrange(Trips) %>%
+  mutate(Agency = shorten_agency(Agency))
+
+plot_ly(
+  april20_data, y = ~Agency, x = ~Trips, type = "bar", orientation = "h",
+  text = ~Agency, textposition = "auto", hoverinfo = 'x'
+) %>%
+  layout(
+    title = "Top 10 Transit Agencies (April 2020 trips)",
+    yaxis = list(
+      categoryorder = "array",
+      categoryarray = ~Agency,
+      showticklabels = FALSE
+    )
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+### Weather
+
+Another key difference between California and New York is the weather. The chart
+below compares average temperatures in San Francisco and Los Angeles with New
+York City. ([source](https://www.ncdc.noaa.gov/cdo-web)) California remained
+noticeably warmer than NYC through early April. There is still debate over the
+influence of weather on COVID-19, but [some
+researchers](https://www.npr.org/sections/goatsandsoda/2020/04/09/830297538/scientists-try-to-figure-out-if-summer-will-slow-the-spread-of-covid-19)
+[think](https://www.cebm.net/covid-19/do-weather-conditions-influence-the-transmission-of-the-coronavirus-sars-cov-2/)
+it could behave like it's well-known coronavirus cousins.
+
+```{r, include = FALSE}
+weather_csv <- here(
+  "static", "data", "2020-06-16-covid-19", "noaa_weather_2020.csv"
+)
+weather_tbl <- read_csv(
+  weather_csv,
+  col_types = cols(
+    STATION = col_character(),
+    NAME = col_character(),
+    LATITUDE = col_double(),
+    LONGITUDE = col_double(),
+    ELEVATION = col_double(),
+    DATE = col_character(),
+    TAVG = col_double(),
+    TMAX = col_double(),
+    TMIN = col_double()
+  )
+) %>%
+  separate(NAME, sep = ", ", into = c("NAME", "REGION")) %>%
+  filter(!is.na(TAVG), REGION != "NJ US") %>%
+  group_by(REGION, DATE) %>%
+  summarize(
+    LATITUDE = first(LATITUDE),
+    LONGITUDE = first(LONGITUDE),
+    TAVG = round(mean(TAVG), 1),
+    TMAX = round(mean(TMAX), 1),
+    TMIN = round(mean(TMIN), 1)
+  ) %>%
+  mutate(
+    sma = rollmean(TAVG, 10, aligh = "right", na.pad = TRUE)
+  )
+
+plot_ly() %>%
+  add_trace(
+    data = weather_tbl, x = ~DATE, y = ~TAVG,
+    color = ~REGION,
+    type = "scatter", mode = "lines",
+    alpha = .15, alpha_stroke = .15, showlegend = FALSE
+  ) %>%
+  add_trace(
+    data = weather_tbl, x = ~DATE, y = ~sma,
+    color = ~REGION,
+    type = "scatter", mode = "lines"
+  ) %>%
+  layout(
+    title = "Average Temperature",
+    yaxis = list(title = "Average Temperature"),
+    xaxis = list(title = "Date")
+  ) %>%
+  config(displayModeBar = FALSE)
+
+```
+
+
+
+## The Rest of the Country {.tabset}
+
+New York City and the northeastern states are so large that the dominate the
+national statistics for deaths, hospitalizations, and positive tests. The
+improvement in the northeastern states may be masking worsening situations in
+the remaining states.
+
+The tabs below show the rate of new cases, daily hospitalizations, and daily
+deaths outside the northeast. The rest of the country is also seeing conditions
+improve.
+
+### New Cases
+
+```{r}
+not_northeast <- states %>%
+  mutate(is_northeast = ifelse(region == "Northeast", 1, 0)) %>%
+  filter(is_northeast == 0) %>%
+  group_by(date) %>%
+  summarize(
+    positiveIncrease = sum(positiveIncrease),
+    totalTestResultsIncrease = sum(totalTestResultsIncrease),
+    deathIncrease = sum(deathIncrease),
+    hospitalizedIncrease = sum(hospitalizedIncrease),
+    population = sum(population)
+  ) %>%
+    mutate(
+    positive_rate = round(positiveIncrease / totalTestResultsIncrease * 1000, 1),
+    # some errors in the reported data lead to 1-2 negative numbers
+    positive_rate = pmax(positive_rate, 0),
+    # death_rate = round(deathIncrease / population * 1000000, 4),
+    # hosp_rate = round(hospitalizedIncrease / population * 1000000, 4),
+    pr_sma = rollmean(positive_rate, 15, align = "right", na.pad = TRUE),
+    death_sma = rollmean(deathIncrease, 15, align = "right", na.pad = TRUE),
+    hosp_sma = rollmean(hospitalizedIncrease, 15, align = "right", na.pad = TRUE)
+  )
+
+plot_ly(not_northeast) %>%
+  add_trace(x = ~date, y = ~positive_rate, type = "bar") %>%
+  add_trace(x = ~date, y = ~pr_sma, type = "scatter", mode = "lines") %>%
+  layout(
+    title = "New Case Rate Outside the Northeast",
+    yaxis = list(title = "Daily Positives per 1k Tests"),
+    showlegend = FALSE
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+
+### Hospitalizations
+
+```{r}
+plot_ly(not_northeast) %>%
+  add_trace(x = ~date, y = ~hospitalizedIncrease, type = "bar") %>%
+  add_trace(x = ~date, y = ~hosp_sma, type = "scatter", mode = "lines") %>%
+  layout(
+    title = "Hospitalizations Outside the Northeast",
+    yaxis = list(title = "Hospitalizations"),
+    xaxis = list(title = ""),
+    showlegend = FALSE
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+### Deaths
+
+```{r}
+plot_ly(not_northeast) %>%
+  add_trace(x = ~date, y = ~deathIncrease, type = "bar") %>%
+  add_trace(x = ~date, y = ~death_sma, type = "scatter", mode = "lines") %>%
+  layout(
+    title = "Daily Deaths Outside the Northeast",
+    yaxis = list(title = "Daily Deaths"),
+    xaxis = list(title = ""),
+    showlegend = FALSE
+  ) %>%
+  config(displayModeBar = FALSE)
+```
+
+## What about Lockdowns?
+
+Lockdowns are the first factor many would consider when thinking about
+differences between states. Intuition might suggest that states with weak or no
+lockdown restrictions would have higher rates of death and positive tests.
+Instead, the comparison of California and New York show that other factors
+are more likely to impact severity.
+
+The chart below again shows testing and death rates for all 50 states, but this
+time, they are color coded by lockdown duration ([source](https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020)). Northeastern states
+that experienced high death rates implemented longer lockdowns as a response.
+Outside the northeast, states adopted different approaches and no clear pattern
+has emerged showing that longer/shorter durations made any meaningful difference.
+  
+```{r}
+plot_ly(data = animation_df) %>%
+  add_trace(
+    x = ~death_rate, y = ~positive_rate, 
+    type = "scatter", mode = "markers",
+    color = ~lockdown_class,
+    colors = c("blue", "gray", "orange", "red"),    
+    size = ~population,
+    alpha = .05, alpha_stroke = .05, showlegend = FALSE,
+    hoverinfo = "text",
+    text = ~paste0(
+      "<br>", state, " week ", week,
+      "<br> DPM: ", round(death_rate, 0),
+      "<br> % Positive: ", round(positive_rate * 100, 0),
+      "<br> Lockdown: ", lockdown_days, " days"
+    )
+  ) %>%
+  add_trace(
+    x = ~death_rate, y = ~positive_rate, 
+    type = "scatter", mode = "markers",
+    marker = list(
+      line = list(
+        color = rgb(49, 52, 56, maxColorValue = 255)
+      )
+    ),
+    color = ~lockdown_class, 
+    colors = c("blue", "gray", "orange", "red"),
+    ids = ~state, frame = ~week,
+    size = ~population,
+    hoverinfo = "text",
+    text = ~paste0(
+      "<br>", state, " week ", week,
+      "<br> DPM: ", round(death_rate, 0),
+      "<br> % Positive: ", round(positive_rate * 100, 0),
+      "<br> Lockdown: ", lockdown_days, " days"
+    )
+  ) %>%
+  add_text(
+    data = labels, text = ~state,
+    x = ~death_rate, y = ~positive_rate, ids = ~state, frame = ~week,
+    textposition = "top", showlegend = FALSE
+  ) %>%  
+  layout(
+    title = "Weekly Metrics by State",
+    yaxis = list(
+      title = "Postives per 1k Tests"
+    ),
+    xaxis = list(
+      title = "Deaths per Million",
+      range = c(0, 273)
+    ),
+    legend = list(
+      title = list(text = "Lockdown<br>Duration")
+    )
+  ) %>%
+  config(displayModeBar = FALSE) %>%
+  animation_opts(frame = 1500)
+```
+
+## Interactive map
+
