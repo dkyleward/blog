@@ -606,6 +606,7 @@ plot_geo() %>%
       "<br>Peak Rate: ", round(peak_deaths$peak_death_rate, 1)
     ),
     span = I(0),
+    colors = "Greys",
     locations = peak_deaths$state, locationmode = 'USA-states'
   ) %>%
   layout(
