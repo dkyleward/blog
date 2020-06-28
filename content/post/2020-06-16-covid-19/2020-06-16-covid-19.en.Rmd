@@ -157,22 +157,22 @@ data. In addition, I compare the experience of states in general and California
 to New York explicitly to offer some data-driven insight as to why states had
 such drastically different experiences.
 
-The primary data source I use below is from
-[https://covidtracking.com/](https://covidtracking.com/). All data/code is linked at the bottom of the article.
+My primary source for COVID-19 data is 
+[https://covidtracking.com/](https://covidtracking.com/). All data/code is
+linked at the bottom of the article.
 
 ## National Data
 
 ### New Cases
 
-The chart below shows the number of daily new cases in blue and the 15-day trend
-in orange. This chart suggests that we saw a modest reduction in new cases and
-are now poised to see an explosion. It's alarming and has prompted renewed
-wall-to-wall news coverage of a "second wave". It looks (incorrectly) like an
-approaching tsunami.
+The chart below shows the number of daily new cases and the 7-day trend. This
+chart suggests that we saw a modest reduction in new cases and are now poised to
+see an explosion. It's alarming and has prompted renewed wall-to-wall news
+coverage of a "second wave". It looks (incorrectly) like an approaching tsunami.
 
 ```{r}
 temp <- nation %>%
-  mutate(sma = rollmean(positiveIncrease, 15, na.pad = TRUE, align = "right"))
+  mutate(sma = rollmean(positiveIncrease, 7, na.pad = TRUE, align = "right"))
 
 plot_ly(data = temp) %>%
   add_trace(
@@ -184,7 +184,7 @@ plot_ly(data = temp) %>%
   ) %>%
   add_trace(
     x = ~date, y = ~sma, type = "scatter", mode = "lines", hoverinfo = "none",
-    name = "15-day Trend", color = default_blue
+    name = "7-day Trend", color = default_blue
   ) %>%
   layout(
     title = "Daily New Cases",
@@ -196,12 +196,12 @@ plot_ly(data = temp) %>%
 ```
 
 The above graph has been presented in various forms by practically every news
-outlet. That's unfortunate, because it's misleading. The first chart below
-presents the same data in blue but also includes the number of negative tests in
-orange. The second chart translates both numbers into the rate of new cases per
-100 tests performed.
+outlet. It is also misleading. The chart below presents the same new-case data
+in blue but also includes the number of negative tests shown by tan bars. The
+amount of tests that come back negative is growing much faster than those that
+come back positive.
 
-```{r, fig.height=3}
+```{r}
 plot_ly(data = nation) %>%
   add_trace(
     x = ~date,
@@ -228,7 +228,13 @@ plot_ly(data = nation) %>%
   config(displayModeBar = FALSE)
 ```
 
-```{r, fig.height=3}
+To accurately present the trend of new cases, they must be shown as a rate per
+100 tests performed. With this metric, you can determine if the virus is
+spreading or if we are simply doing more tests. The rate of new cases has begun
+rising in the past few days, but these charts present a reality that is much
+less alarming.
+
+```{r}
 temp <- nation %>%
   mutate(
     positive_rate = round(positiveIncrease / totalTestResultsIncrease * 100, 1),
@@ -237,7 +243,7 @@ temp <- nation %>%
   
 plot_ly(data = temp) %>%
   add_trace(
-    x = ~date, y = ~positive_rate, type = "bar", name = "Positive",
+    x = ~date, y = ~positive_rate, type = "bar", name = "Case Rate",
     color = default_blue, alpha = .15, alpha_stroke = .15
   ) %>%
   add_trace(
@@ -255,13 +261,6 @@ plot_ly(data = temp) %>%
   config(displayModeBar = FALSE)
 ```
 
-To be sure, the rate of new cases has begun rising in the past few days;
-however, these charts present a much different picture of reality. It is also
-the correct one. If five percent of the population is sick, doubling the number
-of tests doubles the amount of positive cases detected, but the rate of
-infection is unchanged. Presenting raw counts without accounting for this is
-bad data science.
-
 It is also worth noting that the high rates of positive cases in April were in
 part the result of limited tests being reserved for people with COVID-like
 symptoms. As testing increased, a more accurate measure of the infection rate
@@ -269,10 +268,11 @@ has emerged.
 
 ### Hospitalizations
 
-Tracking daily hospital usage offers perhaps the best way to gauge the impact
-of COVID-19. In the chart below, each bar represents the number of people
-in the hospital on that day due to the virus. This metric fell from late April
-to early June, but it has risen in the past four days.
+Tracking daily hospital usage is a better way to gauge the impact
+of COVID-19. This metric is not biased by issues with sample size or frame. In
+the chart below, each bar represents the number of people in the hospital on
+that day due to the virus. This metric fell from late April to mid June, but
+has risen in the past four days.
 
 ```{r, warning=FALSE}
 temp <- nation %>%
@@ -304,20 +304,16 @@ plot_ly(data = temp) %>%
 ### Deaths
 
 Similar to hospital usage, COVID-19 deaths offer a metric that is easier to
-interpret without worrying about sample size issues (as with counts of new
-cases).
-
-In the chart below, the 15-day trend smooths out the cyclical pattern and makes
-the decreasing trend clear. Deaths have fallen since late April; however, deaths
-are a lagging indicator. In a second wave scenario, you would expect to see
-hospitalizations go up first followed by rising deaths. The last bar on the
-chart (June 25th), is an odd data point and likely a data reporting issue. (The
-[New York Times data](https://github.com/nytimes/covid-19-data) lists a similar
-figure of 2,466.)
+interpret. Deaths have fallen since late April; however, deaths are a lagging
+indicator. In a second wave scenario, you would expect to see hospitalizations
+go up first followed by rising deaths. The last bar on the chart (June 25th), is
+an odd data point and likely a data reporting issue. (The [New York Times
+data](https://github.com/nytimes/covid-19-data) lists a similar figure of
+2,466.)
 
 ```{r}
 temp <- nation %>%
-  mutate(sma = rollmean(deathIncrease, 15, na.pad = TRUE, align = "right"))
+  mutate(sma = rollmean(deathIncrease, 7, na.pad = TRUE, align = "right"))
 
 plot_ly(data = temp) %>%
   add_trace(
@@ -327,13 +323,14 @@ plot_ly(data = temp) %>%
   ) %>%
   add_trace(
     x = ~date, y = ~sma, type = "scatter", mode = "lines", 
-    name = "15-day Trend", color = death_gray
+    name = "7-day Trend", color = death_gray
   ) %>%
   layout(
     title = "Daily Deaths",
-    showlegend = FALSE,
+    # showlegend = FALSE,
     xaxis = list(title = ""),
-    yaxis = list(title = "Deaths")
+    yaxis = list(title = "Deaths"),
+    legend = list(x = .7, y = .95)
   ) %>%
   config(displayModeBar = FALSE)
 ```
@@ -342,22 +339,20 @@ plot_ly(data = temp) %>%
 
 Perhaps the most important take away from the above review is that daily
 hospitalization rates are the best statistic to broadcast. They don't require
-adjustment based on the amount of testing or lag behind as much as daily deaths.
-Most media stories I'm seeing are misrepresenting the data by focusing on the
-absolute number of new cases. Without adjusting for the amount of testing, this
-is the worst metric to use.
+adjustment based on the amount of testing or lag behind as much as death
+statistics. Absolute counts of new cases are the worst metric, but this is
+where most news media are focused.
 
 ## State Data
 
-While the nation as a whole is trending in the right direction, decisions to
-re-open are made state by state. Fortunately, we can look at the same metrics
-for each state. Additionally, the experiences of different states may create
-natural experiments for us to examine. 
+While the nation as a whole is trending in the right direction, policy decisions are made by each state individually. This means it's important to review
+state-specific metrics. Different experiences in each state may also create
+natural experiments for us to examine.
 
-In addition to the analysis I present in this post, I've also created an
-interactive viewer for the state data. Click the image below to open the app and
-choose which metric to view, see trends for each state, and compare states to
-each other.
+In addition to the analysis I present in this post, I've created an interactive
+viewer for the state data. Click the image below to open the app and choose
+which metric to view, see trends for each state, and compare states to each
+other.
 
 ```{r}
 app_pic <- here(
@@ -397,13 +392,14 @@ plot_ly(data = temp) %>%
     color = ~state
   ) %>%
   layout(
-    title = "Daily Positive Testing Rate",
+    title = "Daily New Cases per 100 Tests",
     yaxis = list(
-      title = "Positives per 100"
+      title = "New Cases per 100 Tests"
     ),
     xaxis = list(
       title = NA
-    )
+    ),
+    legend = list(x = .7, y = .95)
   ) %>%
   config(displayModeBar = FALSE)
 ```
@@ -411,10 +407,10 @@ plot_ly(data = temp) %>%
 ### Death Rate
 
 At the state level, comparing absolute deaths would be misleading. States like
-New York and California have more people, which means more deaths. As I did with
-new cases, I convert deaths to a rate: deaths per one million people. Even with
-this adjustment, the chart below shows how severe the problem became in NY
-compared to other states.
+New York and California will tend to have more deaths simply because they have
+more people. As I did with new cases, I convert deaths to a rate: deaths per one
+million people. Even with this adjustment, the chart below shows how severe the
+problem became in NY compared to other states.
 
 ```{r}
 temp <- states %>%
@@ -439,16 +435,17 @@ plot_ly(data = temp) %>%
     ),
     xaxis = list(
       title = NA
-    )
+    ),
+    legend = list(x = .7, y = .95)
   ) %>%
   config(displayModeBar = FALSE)
 ```
 
 ## Regional Differences
 
-The chart below shows the rates of hospitalization and death on a weekly basis
-colored by region of the country. Any state that experienced a weekly death rate
-above 50 per million is labeled.
+The animation below shows the rates of hospitalization and death on a weekly
+basis colored by region of the country. Any state that experienced a weekly
+death rate above 50 per million is labeled.
 
   * x-axis: deaths per million
   * y-axis: hospitalized per million
@@ -458,7 +455,8 @@ above 50 per million is labeled.
 Press "Play" to see two primary patterns emerge:
 
   1. The separation of the northeastern states around New York City.
-  2. Hospitalization and death rates are falling for nearly all states.
+  2. Hospitalization and death rates have been falling for nearly all states in
+  the past few weeks.
 
 ```{r}
 # create the weekly stats data frame
@@ -484,10 +482,11 @@ weekly_stats_df <- states %>%
     state_full = first(state_full),
     region = first(region)
   ) %>%
-  # filter out early weeks and any week with <7 days
+  # filter out early weeks when data doesn't exist for every state.
+  # Also filter out any week with <7 days (the latest week)
   filter(week_id > 12, days == 7) %>%
   mutate(
-    week_id = week_id - 12,
+    week_id = week_id - 13, # start sliders at 0
     positive_rate = round(positiveIncrease / totalTestResultsIncrease * 100, 1),
     # some errors in the reported data lead to 1-2 negative numbers
     positive_rate = pmax(positive_rate, 0),
@@ -529,7 +528,6 @@ plot_ly(data = assert_zero) %>%
     x = ~death_rate, y = ~hosp_rate, 
     type = "scatter", mode = "markers",
     size = ~population,
-    # color = "orange",
     color = ~region,
     alpha = .05, alpha_stroke = .05, showlegend = FALSE,
     hoverinfo = "none"
@@ -547,9 +545,10 @@ plot_ly(data = assert_zero) %>%
     size = ~population,
     hoverinfo = "text",
     text = ~paste0(
-      "<br>", state, " week ", week,
-      "<br>Deaths: ", round(death_rate, 0), "/M",
-      "<br>Hopitalized: ", round(hosp_rate, 0), "/k"
+      "<br>", state, 
+      "<br>", week,
+      "<br>DPM: ", round(death_rate, 0),
+      "<br>HPM: ", round(hosp_rate, 0)
     )
   ) %>%
   add_text(
@@ -639,8 +638,8 @@ plot_geo() %>%
 
 California is the most populous state, but it's experience with the virus so far
 has been much less severe. Comparing California and New York reveals important
-similarities and differences that could explain the different experience. It's
-also helpful that they initiated stay-at-home orders [within a day of each
+similarities and differences that could explain the divergence. It's also
+helpful that they initiated stay-at-home orders [within a day of each
 other](https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020).
 
 ### Density
@@ -695,9 +694,11 @@ density_tbl %>%
 Air travel is another important consideration for viral spread. The table below
 shows the top six US metro regions in terms of air travel
 ([source](https://en.wikipedia.org/wiki/List_of_busiest_city_airport_systems_by_passenger_traffic)).
-While NYC tops the list, Los Angeles and San Francisco are not far behind. Being
-on the east coast, NYC also attracts more European tourists, which is [where
-their virus originated](https://www.nytimes.com/2020/04/08/science/new-york-coronavirus-cases-europe-genomes.html).
+While NYC tops the list, Los Angeles and San Francisco are not far behind. One
+potentially important difference not captured below is that NYC attracts more
+European tourists, which is [where their virus
+originated](https://www.nytimes.com/2020/04/08/science/new-york-coronavirus-cases-europe-genomes.html).
+This may or may not prove significant after further study.
 
 ```{r}
 air_url <- "https://en.wikipedia.org/wiki/List_of_busiest_city_airport_systems_by_passenger_traffic"
@@ -792,22 +793,21 @@ transit_multiple <- round(
 )
 ```
 
-Unlike the modest differences in air travel, NYC transit is 
-`r transit_multiple` times larger than the largest market in California during
-usual operation. People crammed into enclosed spaces on the NYC city subway were
-primed to spread the disease.
-
-As the pandemic spread, San Francisco [closed their
+Unlike the modest difference in air travel, NYC transit is `r transit_multiple`
+times larger than the largest market in California during usual operation.
+People crammed into enclosed spaces on the NYC city subway were primed to spread
+the disease. As the virus spread, San Francisco [closed their
 subway](https://sf.curbed.com/2020/3/26/21195566/muni-trains-covid-19-sf-underground-subway)
 while Los Angeles cut back transit service after [steep drops in
 ridership]((https://www.latimes.com/california/story/2020-04-17/coronavirus-cuts-los-angeles-metro-bus-train-service)).
 NYC also saw reduced ridership and ran reduced service, but they only [closed
 the
 subway](https://abc7ny.com/subway-cleaning-plan-mta-coronavirus-nyc/6155622/)
-between 1:00 am and 5:00 am,
+between 1:00 am and 5:00 am.
 
-The chart below updates my original 2019 chart with April 2020 data. NYC
-still recorded more than twice the ridership of Los Angeles.
+The chart below updates my original 2019 chart with April 2020 data. During the
+peak of the viral outbreak, NYC still recorded more than twice the ridership of
+Los Angeles.
 
 ```{r, out.width="100%", warning=FALSE}
 april20_data <- upt_tbl %>%
@@ -836,11 +836,11 @@ plot_ly(
 
 ### Weather
 
-Another difference between California and New York is the weather. The chart
-below compares average temperatures in San Francisco and Los Angeles with New
-York City ([source](https://www.ncdc.noaa.gov/cdo-web)). California remained
-noticeably warmer than NYC through early April. There is still debate over the
-influence of weather on COVID-19, but [some
+Weather also differentiates California from New York. The chart below compares
+average temperatures in San Francisco and Los Angeles with New York City
+([source](https://www.ncdc.noaa.gov/cdo-web)). California remained noticeably
+warmer than NYC through early April. There is still debate over the influence of
+weather on COVID-19, but [some
 researchers](https://www.npr.org/sections/goatsandsoda/2020/04/09/830297538/scientists-try-to-figure-out-if-summer-will-slow-the-spread-of-covid-19)
 [think](https://www.cebm.net/covid-19/do-weather-conditions-influence-the-transmission-of-the-coronavirus-sars-cov-2/)
 it could behave like it's well-known coronavirus cousins.
@@ -903,17 +903,18 @@ plot_ly() %>%
 
 ## What about Lockdowns?
 
-Lockdowns are the first factor many consider when thinking about
-differences between states. Intuition might suggest that states with weak or no
-lockdown restrictions would have higher rates of death and positive tests.
-Instead, the comparison of California and New York show that other factors
-are more likely to impact severity.
+Lockdowns are the first factor many consider when thinking about differences
+between states. Intuition might suggest that states with weak or no lockdown
+restrictions would have higher rates of death and positive tests. Instead, the
+comparison of California to New York shows that other factors are more likely to
+impact severity.
 
-The graphic below again shows hospitalization and death rates for all 50 states, but this
-time, they are color coded by lockdown duration ([source](https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020)). Northeastern states
-implemented longer lockdowns in response to a much more severe viral outbreak.
-Outside the northeast, states adopted different approaches and no clear pattern
-has emerged showing that longer/shorter durations made any meaningful difference.
+The animation from before is now color coded by lockdown duration
+([source](https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020)).
+What is shows is that northeastern states implemented longer lockdowns in
+response to a much more severe viral outbreak. Outside of the northeast, states
+adopted different approaches and no clear pattern emerged showing that longer or
+shorter durations made any meaningful difference.
   
 ```{r}
 plot_ly(data = assert_zero) %>%
@@ -940,7 +941,8 @@ plot_ly(data = assert_zero) %>%
     size = ~population,
     hoverinfo = "text",
     text = ~paste0(
-      "<br>", state, " week ", week,
+      "<br>", state,
+      "<br>", week,
       "<br>DPM: ", round(death_rate, 0),
       "<br>HPM: ", round(hosp_rate, 0),
       "<br>Lockdown: ", lockdown_days, " days"
@@ -975,13 +977,20 @@ plot_ly(data = assert_zero) %>%
 
 # Conclusion
 
-Raw counts must be handled appropriately before making comparisons across time
-or geography. Further, the severity of the virus has varied across the country
-driven by underlying differences like density. Rural states with and without
-lockdowns had similarly mild experiences. Finally, a second wave does appear to
-be forming, which should be expected as states re-open. This fact alone does not
-make it clear what the right policy response should be. Trade offs between viral
-spread and mass unemployment are difficult to balance.
+One of the unique things about the modern day is the abundance of
+information. It is important that we use and present that information
+responsibly. Raw counts must be handled appropriately before making comparisons
+across time or geography.
+
+The severity of the virus has varied across the country likely driven by
+underlying differences in density, transit utilization, and weather. Rural
+states had similarly mild experiences regardless of lockdown duration. Finally,
+a second wave does appear to be forming as states re-open. This fact alone does
+not make it clear what the right policy response should be. Lockdowns have
+[negative
+consequences](https://www.npr.org/sections/goatsandsoda/2020/06/16/874198026/the-cost-of-thailands-coronavirus-success-despair-and-suicide)
+for our lives and livelihoods. Trade offs between these impacts and viral spread
+are difficult to balance.
 
 ## Reproducibility and Data
 
