@@ -1,7 +1,7 @@
 ---
 title: COVID-19 Trends and Insights
 author: D. Kyle Ward
-date: 'June 25, 2020'
+date: 'June 27, 2020'
 slug: covid-19-trends
 categories:
   - Health
@@ -306,8 +306,8 @@ plot_ly(data = temp) %>%
 Similar to hospital usage, COVID-19 deaths offer a metric that is easier to
 interpret. Deaths have fallen since late April; however, deaths are a lagging
 indicator. In a second wave scenario, you would expect to see hospitalizations
-go up first followed by rising deaths. The last bar on the chart (June 25th), is
-an odd data point and likely a data reporting issue. (The [New York Times
+go up first followed by rising deaths. The bar on June 25th is an odd data point
+and likely a data reporting issue. (The [New York Times
 data](https://github.com/nytimes/covid-19-data) lists a similar figure of
 2,466.)
 
@@ -338,21 +338,20 @@ plot_ly(data = temp) %>%
 ### National Summary
 
 Perhaps the most important take away from the above review is that daily
-hospitalization rates are the best statistic to broadcast. They don't require
-adjustment based on the amount of testing or lag behind as much as death
-statistics. Absolute counts of new cases are the worst metric, but this is
-where most news media are focused.
+hospitalization rates are likely the best statistic to broadcast to the public.
+They don't require adjustment based on the amount of testing or lag behind as
+much as death statistics. Absolute counts of new cases are the worst metric, but
+this is where most news media are focused.
 
 ## State Data
 
-While the nation as a whole is trending in the right direction, policy decisions are made by each state individually. This means it's important to review
-state-specific metrics. Different experiences in each state may also create
-natural experiments for us to examine.
-
-In addition to the analysis I present in this post, I've created an interactive
-viewer for the state data. Click the image below to open the app and choose
-which metric to view, see trends for each state, and compare states to each
-other.
+While the nation as a whole is trending in the right direction, policy decisions
+are made at the state level and individual states could be moving in opposite
+directions. Different experiences in each state may also create natural
+experiments for us to examine. In addition to the analysis I present here, I've
+created an interactive viewer for the state data. Click the image below to open
+the app and choose which metric to view, see trends for each state, and compare
+states to each other.
 
 ```{r}
 app_pic <- here(
@@ -444,7 +443,7 @@ plot_ly(data = temp) %>%
 ## Regional Differences
 
 The animation below shows the rates of hospitalization and death on a weekly
-basis colored by region of the country. Any state that experienced a weekly
+basis colored by region of the country. A state that experienced any week with a
 death rate above 50 per million is labeled.
 
   * x-axis: deaths per million
@@ -510,9 +509,10 @@ weekly_stats_df <- states %>%
 
 ```{r}
 assert_zero <- weekly_stats_df %>%
-  mutate(
-    hosp_rate = ifelse(is.na(hosp_rate), 0, hosp_rate)
-  )
+  mutate(hosp_rate = ifelse(is.na(hosp_rate), 0, hosp_rate)) %>%
+  # The last week right before publishing features an error/outlier in
+  # the NJ data but is otherwise similar to the prior week.
+  filter(week_id != 12)
 
 # Create a DF of just those states to be labeled. Label any state that
 # exceeded 50 dpm in any week.
@@ -634,12 +634,13 @@ plot_geo() %>%
   config(displayModeBar = FALSE)
 ```
 
-## Comparing to California
+## Comparison to California
 
-California is the most populous state, but it's experience with the virus so far
-has been much less severe. Comparing California and New York reveals important
-similarities and differences that could explain the divergence. It's also
-helpful that they initiated stay-at-home orders [within a day of each
+California is the most populous state, but compared to New York, it's experience
+with the virus has been far less severe. Comparing the two states reveals
+important similarities and differences that could explain the divergence. One
+important similarity is that they initiated stay-at-home orders [within a day of
+each
 other](https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020).
 
 ### Density
@@ -648,9 +649,9 @@ New York City is the largest, densest city in the country. The table below shows
 the top 10 US cities ranked by population density
 ([source](https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population)).
 San Francisco is second on the list, but has only 1/10th the population. In
-fact, all the Californian cities in the table combined only hold ~1.4 million
-people. This disparity in population and density is a significant reason why
-NYC had a more severe outbreak.
+fact, all the Californian cities in the table combined only hold 1.4 million
+people compared to NYCs 8.3. This disparity in population and density is a
+significant reason why NYC had a more severe outbreak.
 
 ```{r}
 city_dens_url <- "https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"
@@ -794,16 +795,15 @@ transit_multiple <- round(
 ```
 
 Unlike the modest difference in air travel, NYC transit is `r transit_multiple`
-times larger than the largest market in California during usual operation.
+times larger than the largest market in California during normal operation.
 People crammed into enclosed spaces on the NYC city subway were primed to spread
 the disease. As the virus spread, San Francisco [closed their
 subway](https://sf.curbed.com/2020/3/26/21195566/muni-trains-covid-19-sf-underground-subway)
 while Los Angeles cut back transit service after [steep drops in
 ridership]((https://www.latimes.com/california/story/2020-04-17/coronavirus-cuts-los-angeles-metro-bus-train-service)).
-NYC also saw reduced ridership and ran reduced service, but they only [closed
-the
-subway](https://abc7ny.com/subway-cleaning-plan-mta-coronavirus-nyc/6155622/)
-between 1:00 am and 5:00 am.
+NYC also saw reduced ridership and ran reduced service, but they only closed the
+subway between [1:00 am and 5:00
+am](https://abc7ny.com/subway-cleaning-plan-mta-coronavirus-nyc/6155622/).
 
 The chart below updates my original 2019 chart with April 2020 data. During the
 peak of the viral outbreak, NYC still recorded more than twice the ridership of
@@ -903,15 +903,15 @@ plot_ly() %>%
 
 ## What about Lockdowns?
 
-Lockdowns are the first factor many consider when thinking about differences
-between states. Intuition might suggest that states with weak or no lockdown
-restrictions would have higher rates of death and positive tests. Instead, the
-comparison of California to New York shows that other factors are more likely to
-impact severity.
+Lockdowns are the first factor many consider when COVID-19 outbreaks between
+states. Intuition might suggest that states with weak or no lockdown
+restrictions would have higher rates cases, hospitalization, and death. Instead,
+the comparison of California to New York shows that other factors are more
+likely to impact severity.
 
 The animation from before is now color coded by lockdown duration
 ([source](https://ballotpedia.org/Status_of_lockdown_and_stay-at-home_orders_in_response_to_the_coronavirus_(COVID-19)_pandemic,_2020)).
-What is shows is that northeastern states implemented longer lockdowns in
+What it shows is that northeastern states implemented longer lockdowns in
 response to a much more severe viral outbreak. Outside of the northeast, states
 adopted different approaches and no clear pattern emerged showing that longer or
 shorter durations made any meaningful difference.
@@ -977,17 +977,18 @@ plot_ly(data = assert_zero) %>%
 
 # Conclusion
 
-One of the unique things about the modern day is the abundance of
-information. It is important that we use and present that information
-responsibly. Raw counts must be handled appropriately before making comparisons
-across time or geography.
+One of the unique things about the modern day is the abundance of information.
+This is a great benefit, but it is important that we use and present that
+information responsibly. Raw counts must be handled appropriately before making
+comparisons across time or geography. Failure to do so will lead to poor
+decision making.
 
-The severity of the virus has varied across the country likely driven by
-underlying differences in density, transit utilization, and weather. Rural
-states had similarly mild experiences regardless of lockdown duration. Finally,
-a second wave does appear to be forming as states re-open. This fact alone does
-not make it clear what the right policy response should be. Lockdowns have
-[negative
+The severity of the virus has varied across the country and is likely driven by
+underlying differences like density, transit utilization, and weather. Rural
+states with shorter or no lockdowns had milder outbreaks than the northeast
+in spite of stronger restrictions. Finally, a second wave does appear to be
+forming as states re-open. This fact alone does not make it clear what the right
+policy response should be. Lockdowns have [negative
 consequences](https://www.npr.org/sections/goatsandsoda/2020/06/16/874198026/the-cost-of-thailands-coronavirus-success-despair-and-suicide)
 for our lives and livelihoods. Trade offs between these impacts and viral spread
 are difficult to balance.
