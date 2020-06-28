@@ -399,7 +399,7 @@ private_demo_file <- here(
 private_demo_tbl <- read_csv(private_demo_file)
 wake_private_demo_tbl <- private_demo_tbl %>%
   filter(PCNTNM == "WAKE") %>%
-  replace(is.na(.), 0) %>%
+  mutate_if(is.numeric, replace_na, replace = 0) %>%
   mutate(k5_students = rowSums(.[paste0("P", seq(160, 230, 10))])) %>%
   filter(k5_students > 0)
 
