@@ -353,17 +353,11 @@ created an interactive viewer for the state data. Click the image below to open
 the app and choose which metric to view, see trends for each state, and compare
 states to each other.
 
-```{r}
-app_pic <- here(
-  "static", "img", "2020-06-16-covid-19", "interactive_app.png"
-)
-```
+<a href="http://us-covid-app.herokuapp.com/" target = "_blank">
 
-<center>
+![](/img/2020-06-16-covid-19/interactive_app.png)
 
-<a href="http://us-covid-app.herokuapp.com/" target = "_blank"><img src=`r app_pic` width=400px"/></a>
-
-</center>
+</a>
 
 ### New Case Rate
 
