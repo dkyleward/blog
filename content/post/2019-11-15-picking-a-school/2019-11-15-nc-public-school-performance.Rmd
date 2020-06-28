@@ -179,7 +179,9 @@ metrics:
     * Measured by the Education Value-Added Assessment System (EVAAS)
     * Represented by the color of the school
 
-![](/img/2019-11-15-picking-a-school/example_report_card.png)
+```{r}
+knitr::include_graphics("example_report_card.png")
+```
     
 I'm familiar with the EOG tests. I took them as a kid, and the letter grade for
 each school is a pretty straight-forward measure to interpret. An "A" means that
@@ -702,7 +704,9 @@ budgetary constraints. ([source](http://www.ncpublicschools.org/docs/accountabil
 
 Figure 13 from the same report shows the ITBS scores from 1996-2001.
 
-![](/img/2019-11-15-picking-a-school/historical_nc_itbs_scores.png)
+```{r}
+knitr::include_graphics("historical_nc_itbs_scores.png")
+```
 
 These scores aren't encouraging, but it's important to remember that they are
 statewide scores (and old). Based on my research, I expect the scores from Wake
