@@ -16,7 +16,7 @@ image:
   focal_point: ''
   preview_only: no
 projects: []
-draft: true
+draft: false
 editor_options: 
   chunk_output_type: console
 ---
